@@ -1,0 +1,19 @@
+node_modules
+dist
+.next
+.turbo
+.env
+.env.local
+*.log
+.DS_Store
+coverage
+.prisma
+
+# Jenkins
+.jenkins/home/
+.jenkins/jenkins.war
+
+# Allure
+tests/e2e/allure-results/
+tests/e2e/allure-report/
+tests/e2e/output/

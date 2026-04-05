@@ -1,0 +1,405 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Multi-tenant boundary
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects            Project[]
+  testApplications    TestApplication[]
+  integrationConnections IntegrationConnection[]
+  auditLogs           AuditLog[]
+}
+
+model Project {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  key         String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  testApplications TestApplication[]
+  userStories      UserStory[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+}
+
+/// Application under test — base URL, envs, credentials, suite/Jira/Jenkins links
+model TestApplication {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  name              String
+  baseUrl           String
+  /// Encrypted or opaque credential blob for MVP (mock)
+  credentialsJson   String   @default("{}")
+  jiraProjectKey    String?
+  jenkinsJobName    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  environments Environment[]
+  suites       TestSuite[]
+  testRuns     TestRun[]
+  pipelineRuns PipelineRun[]
+
+  @@index([workspaceId])
+}
+
+model Environment {
+  id           String            @id @default(cuid())
+  applicationId String
+  application  TestApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name         String
+  baseUrl      String?
+  variablesJson String           @default("{}")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  testRuns TestRun[]
+
+  @@unique([applicationId, name])
+}
+
+model UserStory {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  key         String
+  title       String
+  description String?
+  status      String    @default("open")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  acceptanceCriteria AcceptanceCriterion[]
+  scenarios          TestScenario[]
+
+  @@unique([projectId, key])
+  @@index([projectId])
+}
+
+model AcceptanceCriterion {
+  id        String    @id @default(cuid())
+  storyId   String
+  story     UserStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  text      String
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+}
+
+model TestSuite {
+  id            String          @id @default(cuid())
+  applicationId String
+  application   TestApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  owner         String?
+  tags          String[]        @default([])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  cases    TestCase[]
+  runs     TestRun[]
+  healthSnapshots SuiteHealthSnapshot[]
+
+  @@unique([applicationId, name])
+  @@index([applicationId])
+}
+
+enum TestPriority {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum TestCaseStatus {
+  active
+  skipped
+  deprecated
+}
+
+model TestCase {
+  id        String         @id @default(cuid())
+  suiteId   String
+  suite     TestSuite      @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  name      String
+  description String?
+  priority  TestPriority   @default(P2)
+  status    TestCaseStatus @default(active)
+  tags      String[]       @default([])
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  failureEvents FailureEvent[]
+
+  @@index([suiteId])
+}
+
+enum TestRunStatus {
+  queued
+  running
+  passed
+  failed
+  cancelled
+  error
+}
+
+model TestRun {
+  id            String          @id @default(cuid())
+  suiteId       String
+  suite         TestSuite       @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   TestApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  environmentId String?
+  environment   Environment?    @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+
+  status      TestRunStatus @default(queued)
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  durationMs  Int?
+  triggeredBy String?
+  jenkinsBuildId String?
+  logs        String?       @db.Text
+
+  failureEvents FailureEvent[]
+  analyses      FailureAnalysis[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([suiteId])
+  @@index([applicationId])
+  @@index([status])
+}
+
+model FailureEvent {
+  id        String   @id @default(cuid())
+  runId     String
+  run       TestRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  caseId    String?
+  testCase  TestCase? @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  message   String   @db.Text
+  stack     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  analyses FailureAnalysis[]
+
+  @@index([runId])
+}
+
+enum FailureClassification {
+  REAL_BUG
+  BROKEN_TEST
+  ENVIRONMENT
+  NEEDS_REVIEW
+}
+
+model FailureAnalysis {
+  id             String                 @id @default(cuid())
+  runId          String
+  run            TestRun                @relation(fields: [runId], references: [id], onDelete: Cascade)
+  failureEventId String?
+  failureEvent   FailureEvent?          @relation(fields: [failureEventId], references: [id], onDelete: SetNull)
+
+  classification FailureClassification
+  confidence     Float
+  summary        String                 @db.Text
+  suggestedAction String?               @db.Text
+  rawOutput      String?                @db.Text
+  createdAt      DateTime               @default(now())
+
+  @@index([runId])
+}
+
+model TestScenario {
+  id        String    @id @default(cuid())
+  storyId   String
+  story     UserStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  title     String
+  steps     String    @db.Text
+  kind      String    @default("happy_path")
+  coverageMapJson String @default("{}")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([storyId])
+}
+
+model SuiteHealthSnapshot {
+  id          String    @id @default(cuid())
+  suiteId     String
+  suite       TestSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  passRate    Float
+  flakyRate   Float
+  riskLevel   String
+  summaryJson String    @default("{}")
+  capturedAt  DateTime  @default(now())
+
+  @@index([suiteId])
+}
+
+enum IntegrationType {
+  jira
+  jenkins
+}
+
+model IntegrationConnection {
+  id          String          @id @default(cuid())
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type        IntegrationType
+  name        String
+  baseUrl     String
+  /// Mock secret reference
+  secretRef   String?
+  configJson  String          @default("{}")
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  webhookEvents WebhookEvent[]
+
+  @@unique([workspaceId, type])
+}
+
+enum WebhookDeliveryStatus {
+  received
+  processing
+  processed
+  failed
+}
+
+model WebhookEvent {
+  id            String                @id @default(cuid())
+  connectionId  String?
+  connection    IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  source        IntegrationType
+  payloadJson   String                @db.Text
+  normalizedJson String?              @db.Text
+  deliveryStatus WebhookDeliveryStatus @default(received)
+  errorMessage  String?
+  createdAt     DateTime              @default(now())
+  processedAt   DateTime?
+
+  @@index([source])
+  @@index([createdAt])
+}
+
+model PromptTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  title     String
+  body      String   @db.Text
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Rule {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  description String?
+  configJson String  @default("{}")
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── AI Pipeline ──────────────────────────────────────────────
+
+enum PipelineStatus {
+  pending
+  planning
+  generating
+  executing
+  healing
+  reporting
+  completed
+  failed
+}
+
+model PipelineRun {
+  id            String         @id @default(cuid())
+  applicationId String
+  application   TestApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  status        PipelineStatus @default(pending)
+  framework     String         @default("codeceptjs")
+
+  promptMarkdown  String?   @db.Text
+  storiesJson     String?   @db.Text
+
+  testPlan        String?   @db.Text
+  planCasesJson   String?   @db.Text
+  coverageSummary String?
+
+  generatedScriptsJson String? @db.Text
+  generatedConfigJson  String? @db.Text
+
+  executionLog    String?   @db.Text
+  executionStatus String?
+
+  healerLog       String?   @db.Text
+  healActionsJson String?   @db.Text
+
+  reportMarkdown  String?   @db.Text
+  totalPlanned    Int?
+  totalGenerated  Int?
+  totalPassed     Int?
+  totalFailed     Int?
+  totalHealed     Int?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  durationMs Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([applicationId])
+  @@index([status])
+}
+
+model McpServerConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  type      String
+  endpoint  String?
+  configJson String  @default("{}")
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  actor       String?
+  action      String
+  resource    String?
+  detailsJson String    @default("{}")
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@index([createdAt])
+}

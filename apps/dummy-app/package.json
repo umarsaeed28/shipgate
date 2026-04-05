@@ -1,0 +1,14 @@
+{
+  "name": "@shipgate/dummy-app",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "cookie-parser": "^1.4.7"
+  }
+}

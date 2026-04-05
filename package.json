@@ -1,0 +1,23 @@
+{
+  "name": "shipgate",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --parallel dev:web dev:api dev:worker",
+    "dev:web": "pnpm --filter @shipgate/web dev",
+    "dev:api": "pnpm --filter @shipgate/api dev",
+    "dev:worker": "pnpm --filter @shipgate/worker dev",
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @shipgate/database generate",
+    "db:migrate": "pnpm --filter @shipgate/database migrate",
+    "db:push": "pnpm --filter @shipgate/database push",
+    "db:seed": "pnpm db:generate && pnpm --filter @shipgate/database seed",
+    "lint": "pnpm -r lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.14.2",
+  "engines": {
+    "node": ">=20"
+  }
+}
