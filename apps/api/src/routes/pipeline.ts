@@ -8,6 +8,7 @@ const createBody = z.object({
   applicationId: z.string(),
   framework: z.enum(["playwright", "codeceptjs"]).default("codeceptjs"),
   promptMarkdown: z.string().optional(),
+  useMcp: z.boolean().default(false),
   stories: z
     .array(
       z.object({
@@ -121,8 +122,9 @@ export function registerPipelineRoutes(queue: Queue): FastifyPluginAsync {
         },
       });
 
+      const jobName = body.useMcp ? "pipeline_orchestrate_mcp" : "pipeline_orchestrate";
       await queue.add(
-        "pipeline_orchestrate",
+        jobName,
         { pipelineRunId: run.id },
         { removeOnComplete: 50 }
       );
