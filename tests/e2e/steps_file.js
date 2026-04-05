@@ -1,11 +1,11 @@
 module.exports = function () {
   return actor({
-    loginAs(username, password) {
+    login() {
       this.amOnPage("/login");
-      this.fillField("#username", username);
-      this.fillField("#password", password);
+      this.fillField("#username", "admin");
+      this.fillField("#password", "admin");
       this.click("#login-btn");
-      this.waitInUrl("/welcome", 10);
+      this.waitInUrl("/calculator", 10);
     },
   });
 };

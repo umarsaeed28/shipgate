@@ -1,8 +1,9 @@
 Feature("Login @smoke");
 
-Scenario("should show login form", ({ I }) => {
+Scenario("should display the login form", ({ I }) => {
   I.amOnPage("/login");
-  I.see("Sign In");
+  I.see("Mortgage Calculator");
+  I.see("Sign in to access the calculator");
   I.seeElement("#username");
   I.seeElement("#password");
   I.seeElement("#login-btn");
@@ -10,29 +11,24 @@ Scenario("should show login form", ({ I }) => {
 
 Scenario("should reject invalid credentials", ({ I }) => {
   I.amOnPage("/login");
-  I.fillField("#username", "wrong");
-  I.fillField("#password", "wrong");
+  I.fillField("#username", "bad");
+  I.fillField("#password", "bad");
   I.click("#login-btn");
   I.see("Invalid username or password", "#login-error");
 });
 
-Scenario("should login with admin/admin and see welcome text", ({ I }) => {
+Scenario("should log in with admin/admin", ({ I }) => {
   I.amOnPage("/login");
   I.fillField("#username", "admin");
   I.fillField("#password", "admin");
   I.click("#login-btn");
-  I.waitInUrl("/welcome", 5);
-  I.see("Welcome to Shipgate", "#welcome-heading");
-  I.see("You have successfully logged in.", "#welcome-message");
+  I.waitInUrl("/calculator", 5);
+  I.see("Mortgage Calculator");
+  I.seeElement("#calc-form");
 });
 
-Scenario("should logout and return to login", ({ I }) => {
-  I.amOnPage("/login");
-  I.fillField("#username", "admin");
-  I.fillField("#password", "admin");
-  I.click("#login-btn");
-  I.waitInUrl("/welcome", 5);
-  I.click("#logout-btn");
+Scenario("should redirect unauthenticated user to login", ({ I }) => {
+  I.amOnPage("/calculator");
   I.waitInUrl("/login", 5);
-  I.see("Sign In");
+  I.see("Sign in to access the calculator");
 });
