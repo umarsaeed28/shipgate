@@ -11,9 +11,11 @@ import {
   type McpCallFn,
 } from "@shipgate/agents";
 import { prisma } from "@shipgate/database";
-import { TestRunStatus, WebhookDeliveryStatus, PipelineStatus } from "@prisma/client";
+import { TestRunStatus, WebhookDeliveryStatus, PipelineStatus, SuggestionStatus } from "@prisma/client";
 import { env } from "./env.js";
 import { execSync } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 const connection = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
 const QUEUE = "shipgate-jobs";
@@ -81,6 +83,12 @@ const worker = new Worker(
     }
     if (name === "pipeline_orchestrate") {
       return await runPipeline(job.data.pipelineRunId);
+    }
+    if (name === "agent_scan") {
+      return await runAgentScan(job.data.applicationId);
+    }
+    if (name === "agent_write_test") {
+      return await runAgentWriteTest(job.data.suggestionId);
     }
     if (name === "pipeline_orchestrate_mcp") {
       const callMcp: McpCallFn = async (server, tool, args) => {
@@ -546,6 +554,374 @@ async function runMcpPipeline(pipelineRunId: string, callMcp: McpCallFn) {
     });
     return { ok: false, error: String(err) };
   }
+}
+
+// ─── Test Creator Agent ─────────────────────────────────────
+
+const REPO_ROOT = process.env.REPO_ROOT || "/Users/umarsaeed/shipgate";
+const TEST_DIR = path.join(REPO_ROOT, "tests/e2e/smoke");
+const APP_DIR = path.join(REPO_ROOT, "apps/dummy-app/src");
+
+async function runAgentScan(applicationId: string) {
+  console.log(`[agent:scan] Scanning for app ${applicationId}…`);
+
+  await prisma.agentActivity.create({
+    data: { applicationId, type: "scan", summary: "Agent scan started" },
+  });
+
+  const app = await prisma.testApplication.findUnique({ where: { id: applicationId } });
+  if (!app) return { ok: false, error: "Application not found" };
+
+  const appCode = readAppCode();
+  const existingTests = readExistingTests();
+  const existingScenarios = extractScenarioNames(existingTests);
+
+  const suggestions = analyzeAndSuggest(appCode, existingScenarios, applicationId);
+
+  let created = 0;
+  for (const sug of suggestions) {
+    const exists = await prisma.testSuggestion.findFirst({
+      where: { applicationId, title: sug.title, status: { in: ["pending", "approved", "written"] } },
+    });
+    if (!exists) {
+      await prisma.testSuggestion.create({ data: sug });
+      created++;
+    }
+  }
+
+  await prisma.agentActivity.create({
+    data: {
+      applicationId,
+      type: "suggest",
+      summary: `Scan complete: ${created} new suggestions, ${suggestions.length - created} duplicates skipped`,
+      detailsJson: JSON.stringify({
+        total: suggestions.length,
+        created,
+        existingScenarios: existingScenarios.length,
+      }),
+    },
+  });
+
+  console.log(`[agent:scan] Created ${created} suggestions`);
+  return { ok: true, created, total: suggestions.length };
+}
+
+function readAppCode(): string {
+  try {
+    const serverFile = path.join(APP_DIR, "server.js");
+    return fs.readFileSync(serverFile, "utf-8");
+  } catch {
+    return "";
+  }
+}
+
+function readExistingTests(): Array<{ file: string; content: string }> {
+  if (!fs.existsSync(TEST_DIR)) return [];
+  return fs
+    .readdirSync(TEST_DIR)
+    .filter((f) => f.endsWith("_test.js"))
+    .map((f) => ({
+      file: f,
+      content: fs.readFileSync(path.join(TEST_DIR, f), "utf-8"),
+    }));
+}
+
+function extractScenarioNames(tests: Array<{ content: string }>): string[] {
+  const names: string[] = [];
+  for (const t of tests) {
+    const matches = t.content.matchAll(/Scenario\(["'](.+?)["']/g);
+    for (const m of matches) names.push(m[1].toLowerCase());
+  }
+  return names;
+}
+
+function analyzeAndSuggest(
+  appCode: string,
+  existingScenarios: string[],
+  applicationId: string
+): Array<{
+  applicationId: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: string;
+  sourceFile: string;
+  triggerReason: string;
+  generatedCode: string;
+  targetFile: string;
+}> {
+  const suggestions: Array<{
+    applicationId: string;
+    title: string;
+    description: string;
+    category: string;
+    priority: string;
+    sourceFile: string;
+    triggerReason: string;
+    generatedCode: string;
+    targetFile: string;
+  }> = [];
+
+  const has = (keyword: string) =>
+    existingScenarios.some((s) => s.includes(keyword.toLowerCase()));
+
+  if (appCode.includes("app.post(\"/logout\"") && !has("logout")) {
+    suggestions.push({
+      applicationId,
+      title: "should logout and redirect to login",
+      description: "Verify that clicking the Logout button ends the session and redirects to /login",
+      category: "smoke",
+      priority: "P1",
+      sourceFile: "apps/dummy-app/src/server.js",
+      triggerReason: "Detected POST /logout route in app code but no logout test exists",
+      generatedCode: [
+        'Scenario("should logout and redirect to login", ({ I }) => {',
+        "  I.login();",
+        '  I.click("Logout");',
+        '  I.waitInUrl("/login", 5);',
+        '  I.see("Sign in");',
+        "});",
+      ].join("\n"),
+      targetFile: "tests/e2e/smoke/01_login_test.js",
+    });
+  }
+
+  if (appCode.includes("app.post(\"/calculator\"") && !has("empty fields")) {
+    suggestions.push({
+      applicationId,
+      title: "should show validation when all fields are empty",
+      description: "Submit the calculator form with no values and verify a validation error appears",
+      category: "negative",
+      priority: "P1",
+      sourceFile: "apps/dummy-app/src/server.js",
+      triggerReason: "Calculator POST handler has validation logic but no empty-fields test exists",
+      generatedCode: [
+        'Scenario("should show validation when all fields are empty", ({ I }) => {',
+        "  I.login();",
+        '  I.click("#calculate-btn");',
+        '  I.seeElement("#calc-error");',
+        "});",
+      ].join("\n"),
+      targetFile: "tests/e2e/smoke/02_calculator_test.js",
+    });
+  }
+
+  if (appCode.includes("Reset") && !has("reset")) {
+    suggestions.push({
+      applicationId,
+      title: "should reset calculator form fields",
+      description: "Fill the calculator form, click Reset, and verify all fields are cleared",
+      category: "smoke",
+      priority: "P2",
+      sourceFile: "apps/dummy-app/src/server.js",
+      triggerReason: "Detected Reset button in calculator UI but no reset test exists",
+      generatedCode: [
+        'Scenario("should reset calculator form fields", ({ I }) => {',
+        "  I.login();",
+        '  I.fillField("#principal", "500000");',
+        '  I.fillField("#downPayment", "100000");',
+        '  I.fillField("#rate", "7");',
+        '  I.click("Reset");',
+        "  I.waitInUrl(\"/calculator\", 5);",
+        "});",
+      ].join("\n"),
+      targetFile: "tests/e2e/smoke/02_calculator_test.js",
+    });
+  }
+
+  if (appCode.includes("/history") && !has("empty history")) {
+    suggestions.push({
+      applicationId,
+      title: "should show empty state when no calculations exist",
+      description: "Navigate to history page with a fresh session and verify the empty state message",
+      category: "edge",
+      priority: "P2",
+      sourceFile: "apps/dummy-app/src/server.js",
+      triggerReason: "History page exists but no test for empty state",
+      generatedCode: [
+        'Scenario("should show empty state when no calculations exist", ({ I }) => {',
+        "  I.login();",
+        '  I.amOnPage("/history");',
+        '  I.see("No calculations yet");',
+        "});",
+      ].join("\n"),
+      targetFile: "tests/e2e/smoke/03_history_test.js",
+    });
+  }
+
+  if (appCode.includes("20 years") && !has("20-year")) {
+    suggestions.push({
+      applicationId,
+      title: "should calculate a 20-year mortgage",
+      description: "Test the 20-year loan term option which exists in the dropdown but isn't tested",
+      category: "smoke",
+      priority: "P2",
+      sourceFile: "apps/dummy-app/src/server.js",
+      triggerReason: "20-year loan term option exists in dropdown but no test covers it",
+      generatedCode: [
+        'Scenario("should calculate a 20-year mortgage", ({ I }) => {',
+        "  I.login();",
+        '  I.fillField("#principal", "400000");',
+        '  I.fillField("#downPayment", "80000");',
+        '  I.fillField("#rate", "6.0");',
+        '  I.selectOption("#years", "20 years");',
+        '  I.click("#calculate-btn");',
+        '  I.waitForElement("#results", 5);',
+        '  I.see("Your Monthly Payment");',
+        "});",
+      ].join("\n"),
+      targetFile: "tests/e2e/smoke/02_calculator_test.js",
+    });
+  }
+
+  if (appCode.includes("10 years") && !has("10-year")) {
+    suggestions.push({
+      applicationId,
+      title: "should calculate a 10-year mortgage",
+      description: "Test the 10-year loan term option which exists in the dropdown but isn't tested",
+      category: "smoke",
+      priority: "P2",
+      sourceFile: "apps/dummy-app/src/server.js",
+      triggerReason: "10-year loan term option exists in dropdown but no test covers it",
+      generatedCode: [
+        'Scenario("should calculate a 10-year mortgage", ({ I }) => {',
+        "  I.login();",
+        '  I.fillField("#principal", "250000");',
+        '  I.fillField("#downPayment", "50000");',
+        '  I.fillField("#rate", "5.5");',
+        '  I.selectOption("#years", "10 years");',
+        '  I.click("#calculate-btn");',
+        '  I.waitForElement("#results", 5);',
+        '  I.see("Your Monthly Payment");',
+        "});",
+      ].join("\n"),
+      targetFile: "tests/e2e/smoke/02_calculator_test.js",
+    });
+  }
+
+  if (appCode.includes("session") && !has("session expir")) {
+    suggestions.push({
+      applicationId,
+      title: "should protect calculator from unauthenticated access via direct URL",
+      description: "Access /calculator without logging in and verify redirect to login",
+      category: "security",
+      priority: "P0",
+      sourceFile: "apps/dummy-app/src/server.js",
+      triggerReason: "Session-based auth detected — need to verify all protected routes",
+      generatedCode: [
+        'Scenario("should protect calculator from unauthenticated access via direct URL", ({ I }) => {',
+        '  I.amOnPage("/history");',
+        '  I.waitInUrl("/login", 5);',
+        "});",
+      ].join("\n"),
+      targetFile: "tests/e2e/smoke/01_login_test.js",
+    });
+  }
+
+  if (appCode.includes("multiple calculations") || appCode.includes("calculations.push")) {
+    if (!has("multiple calculations")) {
+      suggestions.push({
+        applicationId,
+        title: "should record multiple calculations in history",
+        description: "Perform two different calculations and verify both appear in history",
+        category: "smoke",
+        priority: "P1",
+        sourceFile: "apps/dummy-app/src/server.js",
+        triggerReason: "History stores an array of calculations but only single-calculation test exists",
+        generatedCode: [
+          'Scenario("should record multiple calculations in history", ({ I }) => {',
+          "  I.login();",
+          '  I.fillField("#principal", "300000");',
+          '  I.fillField("#downPayment", "60000");',
+          '  I.fillField("#rate", "6.5");',
+          '  I.selectOption("#years", "30 years");',
+          '  I.click("#calculate-btn");',
+          '  I.waitForElement("#results", 5);',
+          "",
+          '  I.amOnPage("/calculator");',
+          '  I.fillField("#principal", "500000");',
+          '  I.fillField("#downPayment", "100000");',
+          '  I.fillField("#rate", "5.0");',
+          '  I.selectOption("#years", "15 years");',
+          '  I.click("#calculate-btn");',
+          '  I.waitForElement("#results", 5);',
+          "",
+          '  I.click("History");',
+          '  I.waitInUrl("/history", 5);',
+          '  I.see("$300,000");',
+          '  I.see("$500,000");',
+          "});",
+        ].join("\n"),
+        targetFile: "tests/e2e/smoke/03_history_test.js",
+      });
+    }
+  }
+
+  return suggestions;
+}
+
+async function runAgentWriteTest(suggestionId: string) {
+  const sug = await prisma.testSuggestion.findUnique({ where: { id: suggestionId } });
+  if (!sug || sug.status !== "approved" || !sug.generatedCode || !sug.targetFile) {
+    return { ok: false, reason: "Not ready to write" };
+  }
+
+  const absTarget = path.join(REPO_ROOT, sug.targetFile);
+
+  if (!fs.existsSync(absTarget)) {
+    return { ok: false, reason: "Target file does not exist" };
+  }
+
+  const content = fs.readFileSync(absTarget, "utf-8");
+  const lines = content.split("\n");
+
+  let insertIdx = lines.length;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim() !== "") {
+      insertIdx = i + 1;
+      break;
+    }
+  }
+
+  const codeToInsert = "\n" + sug.generatedCode + "\n";
+  lines.splice(insertIdx, 0, codeToInsert);
+
+  fs.writeFileSync(absTarget, lines.join("\n"), "utf-8");
+
+  await prisma.testSuggestion.update({
+    where: { id: sug.id },
+    data: { status: SuggestionStatus.written },
+  });
+
+  await prisma.agentActivity.create({
+    data: {
+      applicationId: sug.applicationId,
+      type: "write",
+      summary: `Wrote test "${sug.title}" to ${sug.targetFile}`,
+      detailsJson: JSON.stringify({ targetFile: sug.targetFile, testTitle: sug.title }),
+    },
+  });
+
+  // Check if auto-run is configured
+  const rule = await prisma.rule.findUnique({ where: { key: "conductor_config" } });
+  if (rule) {
+    try {
+      const config = JSON.parse(rule.configJson);
+      if (config.autoRunOnApproval) {
+        console.log(`[agent:write] Auto-run enabled, triggering pipeline…`);
+        await prisma.pipelineRun.create({
+          data: {
+            applicationId: sug.applicationId,
+            framework: "codeceptjs",
+            status: "pending",
+          },
+        });
+      }
+    } catch {}
+  }
+
+  console.log(`[agent:write] Test written to ${sug.targetFile}`);
+  return { ok: true, targetFile: sug.targetFile };
 }
 
 function parseFailures(

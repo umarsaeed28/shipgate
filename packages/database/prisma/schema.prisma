@@ -54,10 +54,11 @@ model TestApplication {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  environments Environment[]
-  suites       TestSuite[]
-  testRuns     TestRun[]
-  pipelineRuns PipelineRun[]
+  environments    Environment[]
+  suites          TestSuite[]
+  testRuns        TestRun[]
+  pipelineRuns    PipelineRun[]
+  testSuggestions TestSuggestion[]
 
   @@index([workspaceId])
 }
@@ -401,5 +402,56 @@ model AuditLog {
   createdAt   DateTime  @default(now())
 
   @@index([workspaceId])
+  @@index([createdAt])
+}
+
+// ─── Test Conductor / Agent ──────────────────────────────────
+
+enum SuggestionStatus {
+  pending
+  approved
+  rejected
+  written
+}
+
+model TestSuggestion {
+  id            String           @id @default(cuid())
+  applicationId String
+  application   TestApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?          @db.Text
+  category      String           @default("smoke")
+  priority      String           @default("P1")
+  sourceFile    String?
+  triggerReason String?          @db.Text
+  generatedCode String?          @db.Text
+  targetFile    String?
+  status        SuggestionStatus @default(pending)
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([applicationId])
+  @@index([status])
+}
+
+enum AgentActivityType {
+  scan
+  suggest
+  write
+  execute
+  watch
+}
+
+model AgentActivity {
+  id            String            @id @default(cuid())
+  applicationId String?
+  type          AgentActivityType
+  summary       String
+  detailsJson   String            @default("{}")  @db.Text
+  createdAt     DateTime          @default(now())
+
+  @@index([applicationId])
   @@index([createdAt])
 }

@@ -72,3 +72,19 @@ Scenario("should handle zero interest rate", ({ I }) => {
   I.see("$0.00", "#total-interest");
   I.see("10 years", "#loan-term");
 });
+
+Scenario("should show validation for excessive interest rate", ({ I }) => {
+  I.login();
+  I.fillField("#principal", "300000");
+  I.fillField("#downPayment", "60000");
+  I.fillField("#rate", "6.5");
+  I.selectOption("#years", "30 years");
+  I.executeScript(() => {
+    document.getElementById("rate").value = "30";
+    document.getElementById("rate").removeAttribute("max");
+    document.getElementById("calc-form").submit();
+  });
+  I.waitForElement("#calc-error", 5);
+  I.see("Interest rate cannot exceed 25%");
+});
+

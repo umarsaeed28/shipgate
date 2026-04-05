@@ -8,6 +8,7 @@ export type NavId =
   | "runs"
   | "run-center"
   | "stories"
+  | "conductor"
   | "pipelines"
   | "integrations"
   | "admin";

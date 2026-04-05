@@ -234,4 +234,90 @@ export const api = {
     json<Array<{ id: string; key: string; name: string; type: string; endpoint: string | null; isEnabled: boolean }>>(
       "/mcp/servers"
     ),
+
+  // Conductor
+  conductorGitStatus: () =>
+    json<{
+      branch: string;
+      lastCommit: { hash: string; message: string; date: string } | null;
+      changedFiles: Array<{ status: string; file: string }>;
+      clean: boolean;
+    }>("/conductor/git/status"),
+  conductorGitLog: () =>
+    json<Array<{ hash: string; message: string; relTime: string; author: string }>>("/conductor/git/log"),
+  conductorFiles: () =>
+    json<{
+      testFiles: Array<{ name: string; path: string; size: number; modified: string }>;
+      appFiles: Array<{ name: string; path: string; size: number; modified: string }>;
+    }>("/conductor/files"),
+  conductorTests: () =>
+    json<
+      Array<{
+        file: string;
+        feature: string;
+        scenarios: Array<{ name: string; line: number }>;
+      }>
+    >("/conductor/tests"),
+  conductorFileContent: (filePath: string) =>
+    json<{ path: string; content: string; lines: number }>(`/conductor/file/${filePath}`),
+  conductorSuggestions: (status?: string) =>
+    json<
+      Array<{
+        id: string;
+        applicationId: string;
+        application: { name: string };
+        title: string;
+        description: string | null;
+        category: string;
+        priority: string;
+        sourceFile: string | null;
+        triggerReason: string | null;
+        generatedCode: string | null;
+        targetFile: string | null;
+        status: string;
+        createdAt: string;
+      }>
+    >(`/conductor/suggestions${status ? `?status=${status}` : ""}`),
+  conductorApprove: (id: string) =>
+    json<{ id: string; status: string }>(`/conductor/suggestions/${id}/approve`, { method: "POST" }),
+  conductorReject: (id: string) =>
+    json<{ id: string; status: string }>(`/conductor/suggestions/${id}/reject`, { method: "POST" }),
+  conductorScan: (applicationId: string) =>
+    json<{ queued: boolean }>("/conductor/scan", {
+      method: "POST",
+      body: JSON.stringify({ applicationId }),
+    }),
+  conductorRunPipeline: (applicationId: string) =>
+    json<{ pipelineRunId: string; status: string }>("/conductor/run-pipeline", {
+      method: "POST",
+      body: JSON.stringify({ applicationId }),
+    }),
+  conductorActivity: (applicationId?: string) =>
+    json<
+      Array<{
+        id: string;
+        applicationId: string | null;
+        type: string;
+        summary: string;
+        detailsJson: string;
+        createdAt: string;
+      }>
+    >(`/conductor/activity${applicationId ? `?applicationId=${applicationId}` : ""}`),
+  conductorConfig: () =>
+    json<{
+      autoScanEnabled: boolean;
+      autoRunOnApproval: boolean;
+      watchPaths: string[];
+      scanIntervalMs: number;
+    }>("/conductor/config"),
+  conductorUpdateConfig: (body: {
+    autoScanEnabled?: boolean;
+    autoRunOnApproval?: boolean;
+    watchPaths?: string[];
+    scanIntervalMs?: number;
+  }) =>
+    json<typeof body>("/conductor/config", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
 };

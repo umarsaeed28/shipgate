@@ -12,6 +12,7 @@ const items: { href: string; label: string; id: NavId }[] = [
   { href: "/runs", label: "Test Runs", id: "runs" },
   { href: "/run-center", label: "Run Center", id: "run-center" },
   { href: "/stories", label: "Stories", id: "stories" },
+  { href: "/conductor", label: "Test Conductor", id: "conductor" },
   { href: "/pipelines", label: "AI Pipeline", id: "pipelines" },
   { href: "/integrations", label: "Integrations", id: "integrations" },
   { href: "/admin", label: "Admin", id: "admin" },

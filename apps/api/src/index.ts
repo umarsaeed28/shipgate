@@ -14,6 +14,7 @@ import { casesRoutes } from "./routes/cases.js";
 import { projectsRoutes } from "./routes/projects.js";
 import { adminRoutes } from "./routes/admin.js";
 import { registerPipelineRoutes } from "./routes/pipeline.js";
+import { registerConductorRoutes } from "./routes/conductor.js";
 
 async function main() {
   const app = Fastify({ logger: true });
@@ -33,6 +34,7 @@ async function main() {
   await app.register(projectsRoutes);
   await app.register(adminRoutes);
   await app.register(registerPipelineRoutes(queue));
+  await app.register(registerConductorRoutes(queue));
 
   app.get("/health", async () => ({ ok: true }));
 

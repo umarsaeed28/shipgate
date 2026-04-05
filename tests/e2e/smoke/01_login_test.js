@@ -32,3 +32,11 @@ Scenario("should redirect unauthenticated user to login", ({ I }) => {
   I.waitInUrl("/login", 5);
   I.see("Sign in to access the calculator");
 });
+
+Scenario("should logout and redirect to login", ({ I }) => {
+  I.login();
+  I.click("Logout");
+  I.waitInUrl("/login", 5);
+  I.see("Sign in");
+});
+
