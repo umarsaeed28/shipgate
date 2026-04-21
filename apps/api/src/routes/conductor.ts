@@ -127,6 +127,49 @@ export function registerConductorRoutes(queue: Queue): FastifyPluginAsync {
       });
     });
 
+    const createSuggestionsBody = z.object({
+      applicationId: z.string(),
+      suggestions: z.array(
+        z.object({
+          title: z.string().min(1),
+          description: z.string().optional(),
+          category: z.string().default("smoke"),
+          priority: z.string().default("P1"),
+          generatedCode: z.string().optional(),
+          targetFile: z.string().optional(),
+          triggerReason: z.string().optional(),
+        })
+      ),
+    });
+
+    app.post("/conductor/suggestions", async (req, reply) => {
+      const body = createSuggestionsBody.parse(req.body);
+      const appExists = await prisma.testApplication.findUnique({
+        where: { id: body.applicationId },
+      });
+      if (!appExists) return reply.status(404).send({ error: "Application not found" });
+
+      const data = body.suggestions.map((s) => ({
+        applicationId: body.applicationId,
+        title: s.title,
+        description: s.description ?? null,
+        category: s.category,
+        priority: s.priority,
+        generatedCode: s.generatedCode ?? null,
+        targetFile: s.targetFile ?? null,
+        triggerReason: s.triggerReason ?? null,
+        status: SuggestionStatus.pending,
+      }));
+
+      const result = await prisma.testSuggestion.createMany({ data });
+      await logActivity(
+        body.applicationId,
+        "suggest",
+        `Agent created ${result.count} test scenario suggestions`
+      );
+      return { created: result.count };
+    });
+
     const approveBody = z.object({
       targetFile: z.string().optional(),
     });

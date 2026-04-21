@@ -16,7 +16,7 @@ export interface ScenarioWriterOutput {
   coverageNotes: string;
 }
 
-/** Generates structured scenarios from a user story — happy, negative, edge; deduped */
+/** Generates structured scenarios from a user story - happy, negative, edge; deduped */
 export interface TestScenarioWriter {
   generate(
     ctx: AgentContext,

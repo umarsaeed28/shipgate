@@ -1,4 +1,4 @@
-/** Mock Jira adapter — connect, import stories, webhook normalization */
+/** Mock Jira adapter - connect, import stories, webhook normalization */
 
 export interface JiraConfig {
   baseUrl: string;

@@ -13,6 +13,8 @@ const schema = z.object({
   DATABASE_URL: z.string(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
   WEBHOOK_SECRET: z.string().default("dev-webhook-secret"),
+  /** Base URL the API uses to call Jenkins (e.g. http://host.docker.internal:8080 when API is in Docker). */
+  JENKINS_INTERNAL_URL: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);

@@ -156,14 +156,14 @@ async function main() {
     data: [
       {
         storyId: story1.id,
-        title: "Happy path — saved card",
+        title: "Happy path - saved card",
         steps: "1. Add item\n2. Checkout\n3. Select saved card\n4. Pay",
         kind: "happy_path",
         coverageMapJson: JSON.stringify({ criteria: ["CHK-101-1"] }),
       },
       {
         storyId: story1.id,
-        title: "Negative — declined card",
+        title: "Negative - declined card",
         steps: "1. Use declined test card\n2. Expect error",
         kind: "negative",
         coverageMapJson: JSON.stringify({ criteria: ["CHK-101-1"] }),

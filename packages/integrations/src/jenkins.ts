@@ -1,4 +1,4 @@
-/** Mock Jenkins adapter — connect, ingest runs, webhook normalization */
+/** Mock Jenkins adapter - connect, ingest runs, webhook normalization */
 
 export interface JenkinsConfig {
   baseUrl: string;

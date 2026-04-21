@@ -1,5 +1,5 @@
 /**
- * MCP Browser Client — abstraction over the Playwright MCP server tools.
+ * MCP Browser Client - abstraction over the Playwright MCP server tools.
  *
  * This module provides a typed interface for calling the cursor-ide-browser MCP
  * tools. In production the callMcp function is injected by the orchestrator

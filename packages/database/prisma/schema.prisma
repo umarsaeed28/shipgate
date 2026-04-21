@@ -37,7 +37,7 @@ model Project {
   @@index([workspaceId])
 }
 
-/// Application under test — base URL, envs, credentials, suite/Jira/Jenkins links
+/// Application under test - base URL, envs, credentials, suite/Jira/Jenkins links
 model TestApplication {
   id          String    @id @default(cuid())
   workspaceId String

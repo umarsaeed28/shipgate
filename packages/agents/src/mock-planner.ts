@@ -19,7 +19,7 @@ export function generateMockTestPlan(input: PlannerInput): TestPlanOutput {
     });
 
     cases.push({
-      title: `[Negative] ${story.title} — invalid input`,
+      title: `[Negative] ${story.title} - invalid input`,
       category: "negative",
       priority: "P1",
       storyRef: story.key,
@@ -57,7 +57,7 @@ export function generateMockTestPlan(input: PlannerInput): TestPlanOutput {
   }
 
   const planMd = [
-    `# Test Plan — ${input.baseUrl}`,
+    `# Test Plan - ${input.baseUrl}`,
     "",
     `## Scope`,
     `- ${input.userStories.length} user stories`,
@@ -73,7 +73,7 @@ export function generateMockTestPlan(input: PlannerInput): TestPlanOutput {
     "",
     ...cases.map(
       (c, i) =>
-        `### ${i + 1}. ${c.title}\n- **Priority:** ${c.priority}\n- **Story:** ${c.storyRef ?? "—"}\n- **Preconditions:** ${c.preconditions}\n- **Steps:**\n${c.steps.map((s) => `  1. ${s}`).join("\n")}\n- **Expected:** ${c.expectedResult}\n`
+        `### ${i + 1}. ${c.title}\n- **Priority:** ${c.priority}\n- **Story:** ${c.storyRef ?? "-"}\n- **Preconditions:** ${c.preconditions}\n- **Steps:**\n${c.steps.map((s) => `  1. ${s}`).join("\n")}\n- **Expected:** ${c.expectedResult}\n`
     ),
   ].join("\n");
 

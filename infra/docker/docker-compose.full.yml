@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shipgate
+      POSTGRES_PASSWORD: shipgate
+      POSTGRES_DB: shipgate
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shipgate -d shipgate"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mortgage-app:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.mortgage-app
+    ports:
+      - "3099:3099"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+
+  # Same Jenkins as repo-root docker-compose.yml - API must use service hostname, not localhost.
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  analysis-api:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.api
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=postgresql://shipgate:shipgate@postgres:5432/shipgate?schema=public
+      - REDIS_URL=redis://redis:6379
+      - PORT=4000
+      - NODE_ENV=production
+      # Reach Jenkins by Docker DNS (Settings UI can still show http://localhost:8080 for links).
+      - JENKINS_INTERNAL_URL=http://jenkins:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jenkins:
+        condition: service_started
+
+  analysis-ui:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.web
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://analysis-api:4000
+      - NODE_ENV=production
+    depends_on:
+      - analysis-api
+
+  scheduler-worker:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.api
+    command: ["node", "dist/worker.js"]
+    environment:
+      - DATABASE_URL=postgresql://shipgate:shipgate@postgres:5432/shipgate?schema=public
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  jenkins_home:

@@ -25,5 +25,31 @@ services:
       timeout: 3s
       retries: 5
 
+  mortgage-app:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.mortgage-app
+    ports:
+      - "3099:3099"
+    environment:
+      - NODE_ENV=production
+
+  # Jenkins LTS - create a Pipeline job named "shipgate-regression" (see Jenkinsfile).
+  # UI: http://localhost:8080 - first run: docker compose logs jenkins (initial admin password).
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
+    # Lets Jenkins reach services on your machine (API :4000, mortgage :3099)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  jenkins_home:

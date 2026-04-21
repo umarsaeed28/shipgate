@@ -1,31 +1,36 @@
-/** @type {import('codeceptjs').CodeceptJS.Config} */
-const config = {
-  tests: "./smoke/*_test.js",
-  output: "./output",
+const { setHeadlessWhen, setCommonPlugins } = require('@codeceptjs/configure');
+
+setHeadlessWhen(process.env.HEADLESS);
+
+exports.config = {
+  tests: process.env.TEST_SUITE === 'smoke' ? './smoke/*_test.js' : './regression/*_test.js',
+  output: './output',
   helpers: {
     Playwright: {
-      browser: "chromium",
-      url: process.env.DUMMY_APP_URL || "http://localhost:3099",
-      show: false,
-      waitForTimeout: 5000,
+      url: process.env.MORTGAGE_APP_URL || 'http://localhost:3099',
+      show: !process.env.HEADLESS,
+      browser: 'chromium',
+      waitForNavigation: 'networkidle',
+      waitForTimeout: 10000,
     },
-  },
-  include: {
-    I: "./steps_file.js",
   },
   plugins: {
     allure: {
       enabled: true,
-      require: "allure-codeceptjs",
-      outputDir: "./allure-results",
+      require: 'allure-codeceptjs',
+      outputDir: './allure-results',
+    },
+    screenshotOnFail: {
+      enabled: true,
+    },
+    retryFailedStep: {
+      enabled: true,
+      retries: 2,
     },
   },
-  mocha: {
-    reporterOptions: {
-      reportDir: "./output",
-    },
+  include: {
+    I: './steps_file.js',
+    calculatorPage: './pages/calculator.js',
   },
-  name: "smoke",
+  name: 'shipgate-regression',
 };
-
-module.exports = { config };

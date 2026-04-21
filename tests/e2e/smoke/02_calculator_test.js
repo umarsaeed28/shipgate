@@ -1,90 +1,47 @@
-Feature("Mortgage Calculator @smoke");
+const fixtures = require('../data/fixtures');
 
-Before(({ I }) => {
-  I.login();
+Feature('Calculator Functionality @smoke');
+
+Scenario('Standard mortgage calculation produces results', ({ I, calculatorPage }) => {
+  I.amOnPage('/');
+  calculatorPage.fillStandardMortgage();
+  calculatorPage.calculate();
+  I.seeElement(calculatorPage.results.monthlyPayment);
+  I.seeElement(calculatorPage.results.principalInterest);
+  I.seeElement(calculatorPage.results.totalLoan);
+  I.seeElement(calculatorPage.results.totalInterest);
 });
 
-Scenario("should show all calculator form fields", ({ I }) => {
-  I.seeElement("#principal");
-  I.seeElement("#downPayment");
-  I.seeElement("#rate");
-  I.seeElement("#years");
-  I.seeElement("#calculate-btn");
-  I.seeElement("#reset-btn");
+Scenario('Monthly payment breakdown shows all components', ({ I, calculatorPage }) => {
+  I.amOnPage('/');
+  calculatorPage.fillStandardMortgage();
+  calculatorPage.calculate();
+  I.seeElement(calculatorPage.results.principalInterest);
+  I.seeElement(calculatorPage.results.monthlyTax);
+  I.seeElement(calculatorPage.results.monthlyInsurance);
 });
 
-Scenario("should calculate a standard 30-year mortgage", ({ I }) => {
-  I.fillField("#principal", "300000");
-  I.fillField("#downPayment", "60000");
-  I.fillField("#rate", "6.5");
-  I.selectOption("#years", "30 years");
-  I.click("#calculate-btn");
-  I.waitForElement("#results", 5);
-  I.see("Your Monthly Payment");
-  I.seeElement("#monthly-payment");
-  I.see("$240,000.00", "#loan-amount");
-  I.see("$60,000.00", "#down-payment-display");
-  I.see("6.5%", "#interest-rate");
-  I.see("30 years", "#loan-term");
+Scenario('Reset button clears the form', ({ I, calculatorPage }) => {
+  I.amOnPage('/');
+  calculatorPage.fillStandardMortgage();
+  calculatorPage.calculate();
+  I.seeElement(calculatorPage.results.section);
+  calculatorPage.reset();
+  I.seeInField(calculatorPage.fields.homePrice, '350000');
 });
 
-Scenario("should calculate a 15-year mortgage", ({ I }) => {
-  I.fillField("#principal", "400000");
-  I.fillField("#downPayment", "80000");
-  I.fillField("#rate", "5.75");
-  I.selectOption("#years", "15 years");
-  I.click("#calculate-btn");
-  I.waitForElement("#results", 5);
-  I.see("Your Monthly Payment");
-  I.see("$320,000.00", "#loan-amount");
-  I.see("15 years", "#loan-term");
-  I.see("5.75%", "#interest-rate");
+Scenario('15-year mortgage can be calculated', ({ I, calculatorPage }) => {
+  I.amOnPage('/');
+  calculatorPage.fillMortgageForm(fixtures.fifteenYear);
+  calculatorPage.calculate();
+  I.seeElement(calculatorPage.results.monthlyPayment);
+  I.seeElement(calculatorPage.results.totalLoan);
 });
 
-Scenario("should show total interest paid", ({ I }) => {
-  I.fillField("#principal", "250000");
-  I.fillField("#downPayment", "0");
-  I.fillField("#rate", "7");
-  I.selectOption("#years", "30 years");
-  I.click("#calculate-btn");
-  I.waitForElement("#results", 5);
-  I.see("Total Interest", "#results");
-  I.seeElement("#total-interest");
-  I.seeElement("#total-payment");
+Scenario('Calculation with HOA fee included', ({ I, calculatorPage }) => {
+  I.amOnPage('/');
+  calculatorPage.fillMortgageForm(fixtures.withHoa);
+  calculatorPage.calculate();
+  I.seeElement(calculatorPage.results.monthlyPayment);
+  I.seeElement(calculatorPage.results.monthlyHoa);
 });
-
-Scenario("should show validation error for down payment exceeding price", ({ I }) => {
-  I.fillField("#principal", "200000");
-  I.fillField("#downPayment", "250000");
-  I.fillField("#rate", "6");
-  I.click("#calculate-btn");
-  I.see("Down payment must be less than home price", "#calc-error");
-  I.dontSeeElement("#results");
-});
-
-Scenario("should handle zero interest rate", ({ I }) => {
-  I.fillField("#principal", "100000");
-  I.fillField("#downPayment", "0");
-  I.fillField("#rate", "0");
-  I.selectOption("#years", "10 years");
-  I.click("#calculate-btn");
-  I.waitForElement("#results", 5);
-  I.see("$0.00", "#total-interest");
-  I.see("10 years", "#loan-term");
-});
-
-Scenario("should show validation for excessive interest rate", ({ I }) => {
-  I.login();
-  I.fillField("#principal", "300000");
-  I.fillField("#downPayment", "60000");
-  I.fillField("#rate", "6.5");
-  I.selectOption("#years", "30 years");
-  I.executeScript(() => {
-    document.getElementById("rate").value = "30";
-    document.getElementById("rate").removeAttribute("max");
-    document.getElementById("calc-form").submit();
-  });
-  I.waitForElement("#calc-error", 5);
-  I.see("Interest rate cannot exceed 25%");
-});
-

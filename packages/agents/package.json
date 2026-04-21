@@ -14,7 +14,11 @@
   "scripts": {
     "build": "tsc"
   },
+  "dependencies": {
+    "@shipgate/shared": "workspace:*"
+  },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "typescript": "^5.7.2"
   }
 }

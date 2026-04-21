@@ -93,7 +93,7 @@ const worker = new Worker(
     if (name === "pipeline_orchestrate_mcp") {
       const callMcp: McpCallFn = async (server, tool, args) => {
         console.log(`[MCP] ${server}.${tool}(${JSON.stringify(args).slice(0, 100)})`);
-        return { note: "MCP call dispatched — requires cursor runtime for live execution" };
+        return { note: "MCP call dispatched - requires cursor runtime for live execution" };
       };
       return await runMcpPipeline(job.data.pipelineRunId, callMcp);
     }
@@ -179,7 +179,7 @@ async function runPipeline(pipelineRunId: string) {
       },
     });
 
-    // Phase 3: Execution (mock — we simulate some passes and failures)
+    // Phase 3: Execution (mock - we simulate some passes and failures)
     console.log(`[pipeline:${pipelineRunId}] Executing…`);
     await prisma.pipelineRun.update({
       where: { id: pipelineRunId },
@@ -194,7 +194,7 @@ async function runPipeline(pipelineRunId: string) {
     const mockFailures = genResult.scripts.slice(0, 1).map((s) => ({
       filename: s.filename,
       testName: s.caseRefs[0] ?? "unknown",
-      error: 'Element "#submit-btn" not found on page — selector may have changed',
+      error: 'Element "#submit-btn" not found on page - selector may have changed',
     }));
 
     const executionLog = [
@@ -807,7 +807,7 @@ function analyzeAndSuggest(
       category: "security",
       priority: "P0",
       sourceFile: "apps/dummy-app/src/server.js",
-      triggerReason: "Session-based auth detected — need to verify all protected routes",
+      triggerReason: "Session-based auth detected - need to verify all protected routes",
       generatedCode: [
         'Scenario("should protect calculator from unauthenticated access via direct URL", ({ I }) => {',
         '  I.amOnPage("/history");',

@@ -240,7 +240,7 @@ export class McpTestPlanner implements TestPlanner {
 
       if (page.inputs.length > 0) {
         cases.push({
-          title: `${pageName} — form fields are displayed`,
+          title: `${pageName} - form fields are displayed`,
           category: "happy_path",
           priority: "P0",
           preconditions: "User is authenticated",
@@ -253,7 +253,7 @@ export class McpTestPlanner implements TestPlanner {
         });
 
         cases.push({
-          title: `${pageName} — submit with valid data`,
+          title: `${pageName} - submit with valid data`,
           category: "happy_path",
           priority: "P0",
           preconditions: "User is authenticated",
@@ -267,7 +267,7 @@ export class McpTestPlanner implements TestPlanner {
         });
 
         cases.push({
-          title: `${pageName} — submit with invalid data`,
+          title: `${pageName} - submit with invalid data`,
           category: "negative",
           priority: "P1",
           preconditions: "User is authenticated",
@@ -280,7 +280,7 @@ export class McpTestPlanner implements TestPlanner {
         });
 
         cases.push({
-          title: `${pageName} — edge case: zero/empty values`,
+          title: `${pageName} - edge case: zero/empty values`,
           category: "edge",
           priority: "P2",
           preconditions: "User is authenticated",
@@ -294,7 +294,7 @@ export class McpTestPlanner implements TestPlanner {
 
       if (page.headings.length > 0 && page.inputs.length === 0) {
         cases.push({
-          title: `${pageName} — page content is displayed`,
+          title: `${pageName} - page content is displayed`,
           category: "happy_path",
           priority: "P1",
           preconditions: "User is authenticated",
@@ -333,7 +333,7 @@ export class McpTestPlanner implements TestPlanner {
     const byCategory = (cat: string) => cases.filter((c) => c.category === cat).length;
 
     const lines = [
-      `# Test Plan — ${input.baseUrl}`,
+      `# Test Plan - ${input.baseUrl}`,
       ``,
       `## Exploration Summary`,
       `- **Pages discovered:** ${pages.length}`,

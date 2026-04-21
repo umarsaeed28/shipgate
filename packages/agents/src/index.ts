@@ -14,3 +14,8 @@ export * from "./mcp-browser.js";
 export * from "./mcp-planner.js";
 export * from "./mcp-generator.js";
 export * from "./mcp-healer.js";
+export * from "./regression-analyzer.js";
+export * from "./run-ingestion.js";
+export * from "./summary-generator.js";
+export * from "./test-conductor-orchestrator.js";
+export * from "./dormancy-controller.js";
