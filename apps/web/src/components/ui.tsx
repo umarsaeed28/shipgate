@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import React from "react";
 
 /* ── Card ────────────────────────────────────────────────── */
 
@@ -10,8 +10,8 @@ export function Card({
   className,
 }: {
   title?: string;
-  children: ReactNode;
-  action?: ReactNode;
+  children: React.ReactNode;
+  action?: React.ReactNode;
   noPadding?: boolean;
   className?: string;
 }) {
@@ -77,7 +77,7 @@ export function DataTable({
   rows,
 }: {
   columns: string[];
-  rows: ReactNode[][];
+  rows: React.ReactNode[][];
 }) {
   if (rows.length === 0) {
     return (
@@ -129,7 +129,7 @@ export function Badge({
   children,
   variant = "default",
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   variant?: "default" | "ok" | "err" | "warn" | "running";
 }) {
   const styles = {
@@ -173,10 +173,10 @@ export function EmptyState({
   description,
   action,
 }: {
-  icon?: ReactNode;
+  icon?: React.ReactNode;
   title: string;
   description?: string;
-  action?: ReactNode;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
@@ -199,7 +199,7 @@ export function Button({
   disabled,
   onClick,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md";
   disabled?: boolean;

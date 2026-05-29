@@ -7,7 +7,7 @@ const navItems = [
   { to: '/bugs', label: 'Bugs', icon: '🐛' },
   { to: '/reports', label: 'Reports', icon: '◧' },
   { to: '/jenkins/pipelines', label: 'Pipeline', icon: 'Ⓙ' },
-  { to: '/agent-status', label: 'Agent Status', icon: '⚙' },
+  { to: '/agent', label: 'Agent', icon: '⚙' },
 ];
 
 const demoItems = [
@@ -45,9 +45,10 @@ export function Sidebar() {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span className="font-bold text-slate-900 text-sm leading-tight">
-            Shipgate
-          </span>
+          <div className="leading-tight">
+            <span className="font-bold text-slate-900 text-sm block">Shipgate</span>
+            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Agent UI</span>
+          </div>
         </div>
       </div>
 
@@ -60,7 +61,7 @@ export function Sidebar() {
       <div className="px-3 pb-2">
         <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Configuration</p>
         <p className="px-3 mt-1 text-[11px] text-slate-400 leading-snug">
-          Jenkins URL and job name - used to monitor CI runs and the Pipeline view.
+          Targets the regression agent: Jenkins, Allure paths, app under test, and scheduler.
         </p>
         <div className="mt-2 space-y-1">
           <NavItem item={{ to: '/settings', label: 'Settings', icon: '⛭' }} />

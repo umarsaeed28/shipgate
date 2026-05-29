@@ -55,6 +55,45 @@ export function useAgentStatus() {
   });
 }
 
+export function useAgentJobs() {
+  return useQuery({
+    queryKey: ['agentJobs'],
+    queryFn: () => api.getAgentJobs(),
+    refetchInterval: 10_000,
+  });
+}
+
+export function useAgentFindings() {
+  return useQuery({
+    queryKey: ['agentFindings'],
+    queryFn: () => api.getAgentFindings(),
+    refetchInterval: 15_000,
+  });
+}
+
+export function useAgentLogs(limit = 600) {
+  return useQuery({
+    queryKey: ['agentLogs', limit],
+    queryFn: () => api.getAgentLogs({ limit }),
+    refetchInterval: 2_000,
+  });
+}
+
+export function useEnqueueAgentJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { kind: 'explore' | 'failure_followup'; relatedFailureId?: string }) =>
+      api.enqueueAgentJob(body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agentJobs'] });
+      queryClient.invalidateQueries({ queryKey: ['agentFindings'] });
+      queryClient.invalidateQueries({ queryKey: ['agentLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['agentStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['overview'] });
+    },
+  });
+}
+
 export function useSettings() {
   return useQuery({
     queryKey: ['settings'],

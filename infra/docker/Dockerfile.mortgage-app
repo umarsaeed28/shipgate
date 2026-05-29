@@ -1,0 +1,13 @@
+FROM node:20-bookworm-slim AS build
+WORKDIR /repo
+RUN corepack enable && corepack prepare pnpm@9.14.2 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/mortgage-app apps/mortgage-app
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @shipgate/mortgage-app build
+
+FROM nginx:1.27-alpine
+COPY infra/docker/nginx-mortgage.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /repo/apps/mortgage-app/dist /usr/share/nginx/html
+EXPOSE 3099
+CMD ["nginx", "-g", "daemon off;"]

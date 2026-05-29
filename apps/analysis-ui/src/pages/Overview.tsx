@@ -1,7 +1,8 @@
+import { Link } from 'react-router-dom';
 import { useOverview, useAnalyzeLatest } from '../api/queries';
 import { KpiCard } from '../components/KpiCard';
 import { PassFailTrend, ClassificationChart } from '../components/TrendChart';
-import type { OverviewResponse } from '../api/client';
+import type { OverviewResponse } from '../types';
 
 export function Overview() {
   const { data, isLoading, error } = useOverview();
@@ -20,7 +21,7 @@ export function Overview() {
     );
   }
 
-  const overview = data as OverviewResponse;
+  const overview: OverviewResponse = data;
   const totalTests = overview.totals?.tests ?? 0;
   const totalPassed = overview.totals?.passed ?? 0;
   const totalFailed = overview.totals?.failed ?? 0;
@@ -53,8 +54,17 @@ export function Overview() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900">Overview</h2>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Overview</h2>
+          <p className="text-sm text-slate-500 mt-1 max-w-xl">
+            Command center for CI quality. The regression agent ingests runs and classifications; open the{' '}
+            <Link to="/agent" className="text-blue-600 hover:text-blue-800 font-medium">
+              Agent console
+            </Link>{' '}
+            to monitor work, queue jobs, and read intelligence findings.
+          </p>
+        </div>
         <button
           className="btn-primary"
           onClick={() => analyze.mutate()}
@@ -115,7 +125,7 @@ export function Overview() {
             Latest Analysis Summary
           </h3>
           <p className="text-xs text-slate-400 mb-3">
-            Build #{latestSummary.buildNumber} &mdash; {latestSummary.shortSummary}
+            Build #{latestSummary.buildNumber} - {latestSummary.shortSummary}
           </p>
           <p className="text-xs text-slate-500">
             {formatRelative(latestSummary.createdAt)}

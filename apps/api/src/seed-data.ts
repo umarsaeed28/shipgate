@@ -38,5 +38,9 @@ export function createSeedData(): Store {
         autoClassifyAbove: 0.85,
       },
     },
+
+    agentJobs: [],
+    agentFindings: [],
+    agentLogs: [],
   };
 }

@@ -40,6 +40,9 @@ export function defaultStore(): Store {
         autoClassifyAbove: 0.85,
       },
     },
+    agentJobs: [],
+    agentFindings: [],
+    agentLogs: [],
   };
 }
 
@@ -59,6 +62,9 @@ export function loadStore(): Store {
   if (typeof store.settings.gitRepoUrl !== "string") {
     store.settings.gitRepoUrl = "";
   }
+  if (!Array.isArray(store.agentJobs)) store.agentJobs = [];
+  if (!Array.isArray(store.agentFindings)) store.agentFindings = [];
+  if (!Array.isArray(store.agentLogs)) store.agentLogs = [];
   return store;
 }
 

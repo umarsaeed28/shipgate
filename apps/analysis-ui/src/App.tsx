@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { Overview } from './pages/Overview';
@@ -38,7 +38,8 @@ export default function App() {
             <Route path="failures" element={<Failures />} />
             <Route path="bugs" element={<Bugs />} />
             <Route path="reports" element={<Reports />} />
-            <Route path="agent-status" element={<AgentStatus />} />
+            <Route path="agent" element={<AgentStatus />} />
+            <Route path="agent-status" element={<Navigate to="/agent" replace />} />
             <Route path="jenkins/pipelines" element={<JenkinsPipelines />} />
             <Route path="demo-tools" element={<DemoTools />} />
             <Route path="settings" element={<Settings />} />

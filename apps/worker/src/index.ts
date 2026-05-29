@@ -93,7 +93,10 @@ const worker = new Worker(
     if (name === "pipeline_orchestrate_mcp") {
       const callMcp: McpCallFn = async (server, tool, args) => {
         console.log(`[MCP] ${server}.${tool}(${JSON.stringify(args).slice(0, 100)})`);
-        return { note: "MCP call dispatched - requires cursor runtime for live execution" };
+        return {
+          note:
+            "Worker has no in-process browser. Run the @shipgate/playwright-agent service (Playwright + MCP-shaped tools + LLM) and use the Analysis UI agent queue, or implement SHIPGATE_REMOTE_MCP_URL to forward MCP calls.",
+        };
       };
       return await runMcpPipeline(job.data.pipelineRunId, callMcp);
     }

@@ -1,5 +1,5 @@
 import type {
-  OverviewData,
+  OverviewResponse,
   Run,
   RunDetail,
   TestFailure,
@@ -12,6 +12,9 @@ import type {
   RunTokenResponse,
   RunStatusResponse,
   JenkinsPipelineData,
+  AgentJob,
+  AgentFinding,
+  AgentLogEntry,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
@@ -122,7 +125,7 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  getOverview: () => fetchApi<OverviewData>('/api/regression/overview'),
+  getOverview: () => fetchApi<OverviewResponse>('/api/regression/overview'),
   getRuns: async () => {
     const res = await fetchApi<{ items: RawRun[] }>('/api/regression/runs');
     return res.items.map((r) => mapRun(r));
@@ -250,4 +253,24 @@ export const api = {
     fetchApi<RunStatusResponse>(`/api/demo/run-status/${token}`),
   resetDemo: () =>
     fetchApi<{ ok: boolean }>('/api/demo/reset', { method: 'POST' }),
+
+  getAgentJobs: () =>
+    fetchApi<{ items: AgentJob[]; total: number }>('/api/regression/agent-jobs'),
+  getAgentFindings: () =>
+    fetchApi<{ items: AgentFinding[]; total: number }>('/api/regression/agent-findings'),
+  enqueueAgentJob: (body: { kind: 'explore' | 'failure_followup'; relatedFailureId?: string }) =>
+    fetchApi<{ ok: boolean; job: AgentJob }>('/api/regression/agent-jobs', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  getAgentLogs: (params?: { limit?: number; jobId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.limit != null) q.set('limit', String(params.limit));
+    if (params?.jobId) q.set('jobId', params.jobId);
+    const qs = q.toString();
+    return fetchApi<{ items: AgentLogEntry[]; total: number }>(
+      `/api/regression/agent-logs${qs ? `?${qs}` : ''}`,
+    );
+  },
 };
