@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: qa-postgres
+    environment:
+      POSTGRES_USER: qa
+      POSTGRES_PASSWORD: qa
+      POSTGRES_DB: qa
+    ports:
+      - "5433:5432"
+    volumes:
+      - qa-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa -d qa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: qa-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: qaadmin
+      MINIO_ROOT_PASSWORD: qaadminsecret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - qa-minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  qa-pg:
+  qa-minio:

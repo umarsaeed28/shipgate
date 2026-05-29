@@ -1,0 +1,23 @@
+{
+  "name": "@qa/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "qa": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@qa/agents": "workspace:*",
+    "@qa/app-model": "workspace:*",
+    "@qa/types": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
