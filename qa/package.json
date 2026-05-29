@@ -1,0 +1,26 @@
+{
+  "name": "qa-platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Embedded agentic QA capability (App Model + Triager + Self-Healer).",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "eval": "pnpm --filter @qa/eval eval"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^20.17.10",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@9.14.2",
+  "engines": {
+    "node": ">=20"
+  }
+}

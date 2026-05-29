@@ -20,9 +20,10 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-20 h-16 bg-white border-b border-slate-200 flex items-center px-6 ml-60">
-      <h1 className="text-lg font-bold text-slate-900">
-        Shipgate Regression Analyzer
-      </h1>
+      <div>
+        <h1 className="text-lg font-bold text-slate-900 leading-tight">Shipgate</h1>
+        <p className="text-[11px] text-slate-500 font-medium tracking-wide uppercase">Agent console</p>
+      </div>
       <div className="ml-auto flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <span className={`w-2.5 h-2.5 rounded-full ${dotColor} ${dotPulse}`} />

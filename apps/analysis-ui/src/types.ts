@@ -7,22 +7,67 @@ export type Classification =
   | 'INFRASTRUCTURE_OR_ENVIRONMENT'
   | 'UNKNOWN_NEEDS_REVIEW';
 
-export interface OverviewData {
-  latestBuild: {
-    number: number;
-    status: BuildStatus;
-    timestamp: string;
-  };
+export interface OverviewPassFailPoint {
+  buildNumber: number;
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
   passRate: number;
-  passRateTrend: number;
-  openFailures: number;
-  classificationBreakdown: Record<Classification, number>;
-  agentStatus: {
-    status: 'idle' | 'running' | 'error';
-    lastRun: string;
-  };
-  trendData: TrendPoint[];
-  latestSummary: RunSummary | null;
+}
+
+export interface OverviewRecentSummary {
+  id: string;
+  buildNumber: number;
+  shortSummary: string;
+  overallStatus: string;
+  totalTests: number;
+  passed: number;
+  failed: number;
+  createdAt: string;
+}
+
+export interface OverviewLatestBuild {
+  id: string;
+  buildNumber: number;
+  jobName: string;
+  status: BuildStatus;
+  startedAt: string;
+  finishedAt: string;
+  duration: number;
+  artifactPaths: string[];
+  processed: boolean;
+  jenkinsBuildUrl?: string | null;
+  allureReportUrl?: string | null;
+}
+
+export interface OverviewAgentState {
+  id: string;
+  name: string;
+  status: 'idle' | 'running' | 'error' | 'dormant';
+  lastWakeAt: string | null;
+  lastRunAt: string | null;
+  lastProcessedBuild: number | null;
+  notes: string;
+}
+
+export interface OverviewSchedulerConfig {
+  id: string;
+  mode: 'polling' | 'webhook' | 'hybrid';
+  cronExpression: string;
+  pollIntervalMinutes: number;
+  enabled: boolean;
+}
+
+/** GET /api/regression/overview */
+export interface OverviewResponse {
+  latestBuild: OverviewLatestBuild | null;
+  recentSummaries: OverviewRecentSummary[];
+  passFailTrend: OverviewPassFailPoint[];
+  classificationBreakdown: Record<string, number>;
+  totals: { tests: number; passed: number; failed: number };
+  agentState: OverviewAgentState;
+  schedulerConfig: OverviewSchedulerConfig;
 }
 
 export interface TrendPoint {
@@ -199,6 +244,48 @@ export interface JenkinsPipelineData {
     allureReportUrl?: string | null;
     duration: number;
   }>;
+}
+
+/** Work for the Playwright + LLM agent (operator view in Analysis UI). */
+export interface AgentJob {
+  id: string;
+  kind: 'explore' | 'failure_followup';
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  sutUrl: string;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  relatedFailureId: string | null;
+  error: string | null;
+  trace?: Array<{ step: number; action: string; detail: string }>;
+  tokenUsage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    llmCalls: number;
+  };
+}
+
+/** Output posted by the agent after a job; primary artifact in the agent UI. */
+export interface AgentFinding {
+  id: string;
+  jobId: string;
+  title: string;
+  summary: string;
+  classification: string;
+  confidence: number;
+  steps: Array<{ step: number; action: string; detail: string }>;
+  createdAt: string;
+}
+
+/** Streamed lines from the Playwright intelligence agent (Console tab). */
+export interface AgentLogEntry {
+  id: string;
+  timestamp: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
+  source: string;
+  message: string;
+  jobId: string | null;
 }
 
 export interface RunTokenResponse {

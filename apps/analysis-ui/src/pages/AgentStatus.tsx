@@ -1,8 +1,16 @@
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAgentStatus } from '../api/queries';
+import {
+  useAgentStatus,
+  useAgentJobs,
+  useAgentFindings,
+  useEnqueueAgentJob,
+  useAgentLogs,
+} from '../api/queries';
 import { DataTable, type Column } from '../components/DataTable';
 import { KpiCard } from '../components/KpiCard';
-import type { AgentActivity } from '../types';
+import { ClassificationBadge } from '../components/ClassificationBadge';
+import type { AgentActivity, AgentJob, AgentFinding } from '../types';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -93,14 +101,121 @@ const activityColumns: Column<AgentActivity>[] = [
   },
 ];
 
+const jobColumns: Column<AgentJob>[] = [
+  {
+    key: 'id',
+    header: 'Job',
+    render: (j) => (
+      <span className="font-mono text-xs text-slate-700" title={j.id}>
+        {j.id.slice(0, 8)}…
+      </span>
+    ),
+  },
+  {
+    key: 'kind',
+    header: 'Kind',
+    render: (j) => <span className="text-sm capitalize">{j.kind.replace('_', ' ')}</span>,
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    render: (j) => {
+      const tone =
+        j.status === 'completed'
+          ? 'bg-emerald-50 text-emerald-800'
+          : j.status === 'running'
+            ? 'bg-blue-50 text-blue-800'
+            : j.status === 'failed'
+              ? 'bg-red-50 text-red-800'
+              : 'bg-amber-50 text-amber-900';
+      return <span className={`text-xs font-semibold px-2 py-0.5 rounded ${tone}`}>{j.status}</span>;
+    },
+  },
+  {
+    key: 'tokenUsage',
+    header: 'Tokens (LLM)',
+    render: (j) => {
+      const u = j.tokenUsage;
+      if (!u) return <span className="text-xs text-slate-400">—</span>;
+      return (
+        <span
+          className="text-xs text-slate-700 tabular-nums"
+          title={`${u.llmCalls} calls · prompt ${u.promptTokens} + completion ${u.completionTokens} = ${u.totalTokens} total`}
+        >
+          {u.totalTokens.toLocaleString()}
+          <span className="text-slate-400 ml-1">({u.llmCalls}×)</span>
+        </span>
+      );
+    },
+  },
+  {
+    key: 'sutUrl',
+    header: 'SUT',
+    render: (j) => (
+      <span className="text-xs text-slate-600 truncate max-w-[200px] inline-block" title={j.sutUrl}>
+        {j.sutUrl}
+      </span>
+    ),
+  },
+  {
+    key: 'createdAt',
+    header: 'Created',
+    render: (j) => <span className="text-xs text-slate-500">{timeAgo(j.createdAt)}</span>,
+  },
+];
+
+const findingColumns: Column<AgentFinding>[] = [
+  {
+    key: 'title',
+    header: 'Title',
+    render: (f) => <span className="font-medium text-slate-900">{f.title}</span>,
+  },
+  {
+    key: 'classification',
+    header: 'Class',
+    render: (f) => <ClassificationBadge classification={f.classification} />,
+  },
+  {
+    key: 'confidence',
+    header: 'Conf.',
+    render: (f) => <span className="text-sm tabular-nums">{(f.confidence * 100).toFixed(0)}%</span>,
+  },
+  {
+    key: 'summary',
+    header: 'Summary',
+    render: (f) => (
+      <span className="text-sm text-slate-600 line-clamp-2 max-w-md" title={f.summary}>
+        {f.summary}
+      </span>
+    ),
+  },
+  {
+    key: 'createdAt',
+    header: 'When',
+    render: (f) => <span className="text-xs text-slate-500">{timeAgo(f.createdAt)}</span>,
+  },
+];
+
 export function AgentStatus() {
   const navigate = useNavigate();
+  const [tab, setTab] = useState<'console' | 'queue' | 'findings'>('console');
   const { data, isLoading, error, isFetching } = useAgentStatus();
+  const jobsQuery = useAgentJobs();
+  const findingsQuery = useAgentFindings();
+  const enqueueJob = useEnqueueAgentJob();
+  const logsQuery = useAgentLogs(600);
+  const logBoxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = logBoxRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [logsQuery.data?.items]);
 
   if (error) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-slate-900">Agent status</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Agent console</h2>
         <div className="card text-center py-12">
           <p className="text-red-600 font-medium mb-2">Failed to load agent status</p>
           <p className="text-sm text-slate-500">{(error as Error).message}</p>
@@ -130,10 +245,11 @@ export function AgentStatus() {
     <div className="space-y-8">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Agent status</h2>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Agent console</h2>
           <p className="text-sm text-slate-500 mt-1 max-w-2xl">
-            Regression analyzer state, scheduler configuration, and a log of recent run analyses. This agent
-            ingests builds from Jenkins or from Demo Tools and produces classified runs in Shipgate.
+            This app is the front end for the regression agent: monitor health, queue browser intelligence jobs
+            for the Playwright worker, and read structured findings. Classic analysis (Jenkins, Allure, classifier)
+            appears under Runs and Failures; container jobs and LLM output land here.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -156,6 +272,89 @@ export function AgentStatus() {
         <p className="text-xs text-slate-400">Refreshing…</p>
       )}
 
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-1">
+        {(
+          [
+            ['console', 'Console'],
+            ['queue', 'Job queue'],
+            ['findings', 'Findings'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+              tab === id
+                ? 'border-blue-600 text-blue-800 bg-blue-50/50'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'queue' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              Pending jobs are picked up by the Playwright agent service (MCP-compatible browser tools + OpenAI loop).
+              It polls{' '}
+              <code className="text-xs bg-slate-100 px-1 rounded">GET /api/regression/agent-jobs/next</code>
+              , claims the job, then posts findings to the Analysis API. Locally:{' '}
+              <code className="text-xs bg-slate-100 px-1 rounded">
+                OPENAI_API_KEY=… pnpm dev:playwright-agent
+              </code>{' '}
+              with the API running and application URL set in Settings.
+            </p>
+            <button
+              type="button"
+              className="btn-primary text-sm"
+              disabled={enqueueJob.isPending}
+              onClick={() => enqueueJob.mutate({ kind: 'explore' })}
+            >
+              {enqueueJob.isPending ? 'Enqueueing…' : 'Enqueue explore job'}
+            </button>
+          </div>
+          {jobsQuery.isLoading ? (
+            <div className="card h-40 bg-slate-100 animate-pulse" />
+          ) : jobsQuery.error ? (
+            <div className="card text-red-600 text-sm">Could not load jobs.</div>
+          ) : (
+            <DataTable
+              columns={jobColumns}
+              data={jobsQuery.data?.items ?? []}
+              keyExtractor={(j) => j.id}
+              emptyMessage="No agent jobs yet. Enqueue an explore job or connect the Playwright container worker."
+            />
+          )}
+        </div>
+      )}
+
+      {tab === 'findings' && (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Structured results from the intelligence agent (classifications, summaries, step traces). Distinct
+            from Allure-based run summaries on the Reports page.
+          </p>
+          {findingsQuery.isLoading ? (
+            <div className="card h-40 bg-slate-100 animate-pulse" />
+          ) : findingsQuery.error ? (
+            <div className="card text-red-600 text-sm">Could not load findings.</div>
+          ) : (
+            <DataTable
+              columns={findingColumns}
+              data={findingsQuery.data?.items ?? []}
+              keyExtractor={(f) => f.id}
+              emptyMessage="No findings yet. When the Playwright agent completes a job and posts results, they appear here."
+            />
+          )}
+        </div>
+      )}
+
+      {tab === 'console' && (
+        <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KpiCard
           title="Agent state"
@@ -256,6 +455,59 @@ export function AgentStatus() {
         </div>
       </div>
 
+      <div className="card border border-slate-200 shadow-sm">
+        <div className="mb-2">
+          <h3 className="text-lg font-semibold text-slate-900">Intelligence agent log</h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Live tail from the Playwright + MCP worker (streamed to the API). Analyzer activity is below.{' '}
+            <span className="text-slate-400">
+              {logsQuery.data?.total != null ? `${logsQuery.data.total} lines stored.` : ''}
+            </span>
+          </p>
+        </div>
+        <div
+          ref={logBoxRef}
+          className="h-72 overflow-y-auto rounded-lg bg-slate-950 text-slate-100 font-mono text-[11px] leading-relaxed p-3 whitespace-pre-wrap break-words"
+        >
+          {logsQuery.isLoading && <span className="text-slate-500">Loading logs…</span>}
+          {logsQuery.error && (
+            <span className="text-red-400">Could not load agent logs. Is the API running?</span>
+          )}
+          {logsQuery.data?.items.map((line) => (
+            <div key={line.id} className="border-b border-slate-800/80 py-0.5 last:border-0">
+              <span className="text-slate-500">{new Date(line.timestamp).toLocaleTimeString()}</span>{' '}
+              <span
+                className={
+                  line.level === 'error'
+                    ? 'text-red-400'
+                    : line.level === 'warn'
+                      ? 'text-amber-300'
+                      : line.level === 'debug'
+                        ? 'text-slate-400'
+                        : 'text-emerald-400'
+                }
+              >
+                [{line.level}]
+              </span>{' '}
+              <span className="text-slate-500">{line.source}</span>
+              {line.jobId ? (
+                <span className="text-slate-600 ml-1" title={line.jobId}>
+                  #{line.jobId.slice(0, 8)}
+                </span>
+              ) : null}
+              <span className="text-slate-400">: </span>
+              <span className="text-slate-100">{line.message}</span>
+            </div>
+          ))}
+          {logsQuery.data && logsQuery.data.items.length === 0 && !logsQuery.isLoading && (
+            <span className="text-slate-500">
+              No intelligence agent logs yet. Run{' '}
+              <code className="text-slate-400">pnpm dev:playwright-agent</code> with OPENAI_API_KEY and enqueue a job.
+            </span>
+          )}
+        </div>
+      </div>
+
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-900">Activity log</h3>
@@ -268,6 +520,8 @@ export function AgentStatus() {
           emptyMessage="No runs yet. Start a regression from Demo Tools or ingest a build from Jenkins."
         />
       </div>
+        </>
+      )}
     </div>
   );
 }

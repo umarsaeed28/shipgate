@@ -1,0 +1,12 @@
+---
+description: TypeScript and code conventions
+globs: "**/*.ts"
+---
+# TypeScript conventions
+- Strict mode on. No `any`; use `unknown` + zod parsing at boundaries.
+- All cross-package and all agent/tool I/O is defined as zod schemas in @qa/types; infer TS types from them.
+- Pure functions for anything deterministic (fingerprinting, classification heuristics, diffing). Keep side
+  effects (db, network, MCP, LLM) behind injected interfaces so they can be faked in tests.
+- No business logic in index/barrel files. Small modules, explicit exports.
+- Errors are typed Result unions or thrown domain errors — never silent catch-and-continue.
+- Every package builds and type-checks independently (`pnpm -r build`).

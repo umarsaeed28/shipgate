@@ -98,6 +98,19 @@ services:
       redis:
         condition: service_healthy
 
+  playwright-agent:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.playwright-agent
+    environment:
+      SHIPGATE_API_URL: http://analysis-api:4000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AGENT_MODEL: ${AGENT_MODEL:-gpt-4o-mini}
+    shm_size: "1gb"
+    depends_on:
+      - analysis-api
+      - mortgage-app
+
 volumes:
   pgdata:
   jenkins_home:

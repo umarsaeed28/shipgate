@@ -4,7 +4,14 @@ import type { FastifyPluginAsync } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { z } from "zod";
 import { getStore, saveStore } from "../store.js";
-import type { JenkinsBuildRecord, Store, TestRunRecord } from "../data-types.js";
+import type {
+  AgentFindingRecord,
+  AgentJobRecord,
+  AgentLogEntryRecord,
+  JenkinsBuildRecord,
+  Store,
+  TestRunRecord,
+} from "../data-types.js";
 import { E2E_DIR } from "../lib/e2e-allure.js";
 import { env } from "../env.js";
 import {
@@ -328,6 +335,195 @@ export const regressionRoutes: FastifyPluginAsync = async (app) => {
   // ── GET /agent-status ────────────────────────────────────────────
   app.get("/agent-status", async () => {
     return buildAgentStatusPayload(getStore());
+  });
+
+  // ── Intelligence agent (Playwright container polls these; Analysis UI is the operator console) ──
+
+  const createAgentJobBody = z.object({
+    kind: z.enum(["explore", "failure_followup"]),
+    relatedFailureId: z.string().optional(),
+  });
+
+  app.get("/agent-jobs", async () => {
+    const store = getStore();
+    const items = [...store.agentJobs].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return { items, total: items.length };
+  });
+
+  /** Next pending job for the container agent (FIFO). */
+  app.get("/agent-jobs/next", async () => {
+    const store = getStore();
+    const pending = store.agentJobs
+      .filter((j) => j.status === "pending")
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    return { job: pending[0] ?? null };
+  });
+
+  app.post("/agent-jobs", async (req, reply) => {
+    const body = createAgentJobBody.parse(req.body);
+    const store = getStore();
+    const sutUrl = store.settings.appUrl.trim();
+    if (!sutUrl) {
+      return reply.status(400).send({ error: "Set application URL in Settings before enqueueing agent jobs." });
+    }
+    if (body.kind === "failure_followup" && !body.relatedFailureId) {
+      return reply.status(400).send({ error: "relatedFailureId required for failure_followup jobs." });
+    }
+    const now = new Date().toISOString();
+    const job: AgentJobRecord = {
+      id: crypto.randomUUID(),
+      kind: body.kind,
+      status: "pending",
+      sutUrl,
+      createdAt: now,
+      startedAt: null,
+      completedAt: null,
+      relatedFailureId: body.relatedFailureId ?? null,
+      error: null,
+    };
+    store.agentJobs.push(job);
+    saveStore(store);
+    return { ok: true, job };
+  });
+
+  app.post<{ Params: { id: string } }>("/agent-jobs/:id/claim", async (req, reply) => {
+    const store = getStore();
+    const job = store.agentJobs.find((j) => j.id === req.params.id);
+    if (!job) return reply.status(404).send({ error: "Job not found" });
+    if (job.status !== "pending") {
+      return reply.status(409).send({ error: `Job is ${job.status}, not pending` });
+    }
+    const now = new Date().toISOString();
+    job.status = "running";
+    job.startedAt = now;
+    store.agentState.status = "running";
+    store.agentState.lastWakeAt = now;
+    saveStore(store);
+    return { ok: true, job };
+  });
+
+  const completeAgentJobBody = z.object({
+    status: z.enum(["completed", "failed"]),
+    error: z.string().optional(),
+    trace: z
+      .array(z.object({ step: z.number(), action: z.string(), detail: z.string() }))
+      .optional(),
+    tokenUsage: z
+      .object({
+        promptTokens: z.number().int().min(0),
+        completionTokens: z.number().int().min(0),
+        totalTokens: z.number().int().min(0),
+        llmCalls: z.number().int().min(0),
+      })
+      .optional(),
+  });
+
+  app.post<{ Params: { id: string } }>("/agent-jobs/:id/complete", async (req, reply) => {
+    const body = completeAgentJobBody.parse(req.body);
+    const store = getStore();
+    const job = store.agentJobs.find((j) => j.id === req.params.id);
+    if (!job) return reply.status(404).send({ error: "Job not found" });
+    if (job.status !== "running") {
+      return reply.status(409).send({ error: `Job is ${job.status}, expected running` });
+    }
+    const now = new Date().toISOString();
+    job.completedAt = now;
+    job.error = body.status === "failed" ? (body.error ?? "failed") : null;
+    job.trace = body.trace;
+    if (body.tokenUsage) {
+      job.tokenUsage = body.tokenUsage;
+    }
+    job.status = body.status === "completed" ? "completed" : "failed";
+    store.agentState.status = body.status === "completed" ? "idle" : "error";
+    store.agentState.lastRunAt = now;
+    store.agentState.notes =
+      body.status === "completed"
+        ? `Agent job ${job.id.slice(0, 8)}… completed.`
+        : `Agent job failed: ${job.error ?? "unknown"}`;
+    saveStore(store);
+    return { ok: true, job };
+  });
+
+  const postFindingBody = z.object({
+    jobId: z.string(),
+    title: z.string(),
+    summary: z.string(),
+    classification: z.string(),
+    confidence: z.number().min(0).max(1),
+    steps: z.array(z.object({ step: z.number(), action: z.string(), detail: z.string() })),
+  });
+
+  app.post("/agent/findings", async (req, reply) => {
+    const body = postFindingBody.parse(req.body);
+    const store = getStore();
+    const job = store.agentJobs.find((j) => j.id === body.jobId);
+    if (!job) return reply.status(404).send({ error: "Job not found" });
+    const finding: AgentFindingRecord = {
+      id: crypto.randomUUID(),
+      jobId: body.jobId,
+      title: body.title,
+      summary: body.summary,
+      classification: body.classification,
+      confidence: body.confidence,
+      steps: body.steps,
+      createdAt: new Date().toISOString(),
+    };
+    store.agentFindings.push(finding);
+    saveStore(store);
+    return { ok: true, finding };
+  });
+
+  app.get("/agent-findings", async () => {
+    const store = getStore();
+    const items = [...store.agentFindings].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return { items, total: items.length };
+  });
+
+  const MAX_AGENT_LOGS = 2500;
+
+  const postAgentLogBody = z.object({
+    level: z.enum(["info", "warn", "error", "debug"]).default("info"),
+    source: z.string().max(64).default("playwright-agent"),
+    message: z.string().min(1).max(16_000),
+    jobId: z.string().uuid().optional().nullable(),
+  });
+
+  /** Intelligence agent log tail (oldest → newest within the window). */
+  app.get("/agent-logs", async (req) => {
+    const store = getStore();
+    const query = req.query as { limit?: string; jobId?: string };
+    const limit = Math.min(2000, Math.max(10, parseInt(query.limit || "500", 10) || 500));
+    let rows = [...store.agentLogs].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
+    if (query.jobId) {
+      rows = rows.filter((r) => r.jobId === query.jobId);
+    }
+    const slice = rows.length > limit ? rows.slice(-limit) : rows;
+    return { items: slice, total: store.agentLogs.length };
+  });
+
+  app.post("/agent-logs", async (req) => {
+    const body = postAgentLogBody.parse(req.body);
+    const store = getStore();
+    const entry: AgentLogEntryRecord = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      level: body.level,
+      source: body.source.trim() || "playwright-agent",
+      message: body.message,
+      jobId: body.jobId ?? null,
+    };
+    store.agentLogs.push(entry);
+    while (store.agentLogs.length > MAX_AGENT_LOGS) {
+      store.agentLogs.shift();
+    }
+    saveStore(store);
+    return { ok: true, id: entry.id };
   });
 
   // ── GET /settings - nested shape for Analysis UI (Jenkins, Allure, SUT, analysis, scheduler) ──

@@ -111,6 +111,49 @@ export interface BugRecord {
   relatedFailureIds: string[];
 }
 
+/** Work queue for the containerized Playwright + LLM agent (polled via Analysis API). */
+export interface AgentJobRecord {
+  id: string;
+  kind: "explore" | "failure_followup";
+  status: "pending" | "running" | "completed" | "failed";
+  sutUrl: string;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  relatedFailureId: string | null;
+  error: string | null;
+  trace?: Array<{ step: number; action: string; detail: string }>;
+  /** Aggregated LLM token usage for this job (OpenAI chat.completions). */
+  tokenUsage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    llmCalls: number;
+  };
+}
+
+/** Structured output from an agent run; shown in Analysis UI (agent front end). */
+export interface AgentFindingRecord {
+  id: string;
+  jobId: string;
+  title: string;
+  summary: string;
+  classification: string;
+  confidence: number;
+  steps: Array<{ step: number; action: string; detail: string }>;
+  createdAt: string;
+}
+
+/** Streamed log lines from the Playwright intelligence agent (and optional other sources). */
+export interface AgentLogEntryRecord {
+  id: string;
+  timestamp: string;
+  level: "info" | "warn" | "error" | "debug";
+  source: string;
+  message: string;
+  jobId: string | null;
+}
+
 export interface Store {
   jenkinsBuilds: JenkinsBuildRecord[];
   testRuns: TestRunRecord[];
@@ -120,4 +163,7 @@ export interface Store {
   agentState: AgentStateRecord;
   schedulerConfig: SchedulerConfigRecord;
   settings: SettingsRecord;
+  agentJobs: AgentJobRecord[];
+  agentFindings: AgentFindingRecord[];
+  agentLogs: AgentLogEntryRecord[];
 }

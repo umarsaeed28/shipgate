@@ -34,6 +34,22 @@ services:
     environment:
       - NODE_ENV=production
 
+  # Playwright + OpenAI agent: polls Analysis API for jobs, drives browser via MCP-shaped tools, posts findings.
+  # Requires OPENAI_API_KEY. Point SHIPGATE_API_URL at the host API (or add api service to this compose).
+  playwright-agent:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.playwright-agent
+    environment:
+      SHIPGATE_API_URL: http://host.docker.internal:4000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AGENT_MODEL: ${AGENT_MODEL:-gpt-4o-mini}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    shm_size: "1gb"
+    depends_on:
+      - mortgage-app
+
   # Jenkins LTS - create a Pipeline job named "shipgate-regression" (see Jenkinsfile).
   # UI: http://localhost:8080 - first run: docker compose logs jenkins (initial admin password).
   jenkins:
