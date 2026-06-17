@@ -104,6 +104,7 @@ export class MockProvider implements LlmProvider {
   readonly name = "mock";
 
   async complete(req: CompleteRequest): Promise<string> {
+    req.onMeta?.({ provider: this.name, correlationId: req.correlationId });
     switch (req.promptId) {
       case "scenario.v1":
         return genScenarios((req.input ?? {}) as ScenarioInput);

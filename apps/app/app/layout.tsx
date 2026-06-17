@@ -8,7 +8,7 @@ import { Sidebar } from "./components/Sidebar";
 import { RoleSwitch } from "./components/RoleSwitch";
 
 export const metadata: Metadata = {
-  title: "ShipGate QA — workspace",
+  title: "Shipgate QA — workspace",
   description: "AI-managed QA workspace",
 };
 

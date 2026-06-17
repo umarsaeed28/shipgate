@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import { prisma, recordEvent } from "@qa/store";
 import { clientConfig } from "@qa/config/client";
 import {
@@ -33,6 +34,9 @@ export interface DraftInput {
  * pending_review, and record an Event per scenario.
  */
 export async function draftScenarios(input: DraftInput) {
+  // Correlate this agent run across every model call and Event so our history
+  // store lines up with AWS CloudTrail entries (see qa-platform.mdc).
+  const correlationId = randomUUID();
   const atlas = createAtlassianClient(await atlassianCreds());
   const story = await atlas.getStory(input.storyKey);
 
@@ -61,11 +65,16 @@ export async function draftScenarios(input: DraftInput) {
   };
   const prompt = scenarioPromptV1(promptInput);
 
+  let modelRequestId: string | undefined;
   const drafted = await llm.completeStructured(ScenarioDraftList, {
     promptId: prompt.promptId,
     input: promptInput,
     system: prompt.system,
     user: prompt.user,
+    correlationId,
+    onMeta: (m) => {
+      modelRequestId = m.requestId;
+    },
   });
 
   const createdIds: string[] = [];
@@ -86,11 +95,22 @@ export async function draftScenarios(input: DraftInput) {
     await recordEvent({
       type: "scenario_drafted",
       entityRef: row.id,
-      payload: { kind: s.kind, storyKey: story.key, provider: llm.providerName },
+      payload: {
+        kind: s.kind,
+        storyKey: story.key,
+        provider: llm.providerName,
+        correlationId,
+        modelRequestId,
+      },
     });
   }
 
-  return { scenarioIds: createdIds, storyKey: story.key, provider: llm.providerName };
+  return {
+    scenarioIds: createdIds,
+    storyKey: story.key,
+    provider: llm.providerName,
+    correlationId,
+  };
 }
 
 /**
@@ -99,6 +119,7 @@ export async function draftScenarios(input: DraftInput) {
  * plus an Event. Tests are written only under tests/**.
  */
 export async function generateAndRunTest(scenarioId: string) {
+  const correlationId = randomUUID();
   const scenario = await prisma.scenario.findUnique({ where: { id: scenarioId } });
   if (!scenario) throw new Error(`Scenario ${scenarioId} not found`);
 
@@ -114,11 +135,16 @@ export async function generateAndRunTest(scenarioId: string) {
     scenario: { title: scenario.title, steps: scenario.steps },
     baseUrl,
   });
+  let modelRequestId: string | undefined;
   const gen = await llm.completeStructured(GeneratedTest, {
     promptId: prompt.promptId,
     input: { scenario: { title: scenario.title, steps: scenario.steps }, baseUrl },
     system: prompt.system,
     user: prompt.user,
+    correlationId,
+    onMeta: (m) => {
+      modelRequestId = m.requestId;
+    },
   });
 
   const dir = testsDir();
@@ -129,7 +155,12 @@ export async function generateAndRunTest(scenarioId: string) {
   await recordEvent({
     type: "test_generated",
     entityRef: scenarioId,
-    payload: { filePath, provider: llm.providerName },
+    payload: {
+      filePath,
+      provider: llm.providerName,
+      correlationId,
+      modelRequestId,
+    },
   });
 
   const result = await runTest(filePath, baseUrl);
@@ -159,6 +190,7 @@ export async function generateAndRunTest(scenarioId: string) {
       passed: result.passed,
       durationMs: result.durationMs,
       baseUrl,
+      correlationId,
     },
   });
 

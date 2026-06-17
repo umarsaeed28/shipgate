@@ -1,10 +1,32 @@
 import type { z } from "zod";
 import type { CompleteRequest, LlmProvider } from "./types";
 import { AnthropicProvider } from "./providers/anthropic";
+import { BedrockProvider } from "./providers/bedrock";
 import { MockProvider } from "./providers/mock";
-import { hasRealKey, resolveModel } from "./model";
+import { hasRealKey, resolveModel, resolveProvider, resolveRegion } from "./model";
 
+/**
+ * Select the provider from LLM_PROVIDER. Both real providers expose the same
+ * complete()/completeStructured() surface, so no agent code changes.
+ *
+ * - "bedrock" (default for deployment): Claude via Amazon Bedrock, IAM auth, no
+ *   model provider API key. If AWS_REGION is not configured (e.g. an offline
+ *   local demo), fall back to the deterministic mock so the pipeline stays
+ *   runnable; in deployment the region is always set.
+ * - "anthropic" (local development): direct API when a real key is present,
+ *   otherwise the deterministic mock.
+ */
 function pickProvider(): LlmProvider {
+  if (resolveProvider() === "bedrock") {
+    if (!resolveRegion()) {
+      console.warn(
+        "[llm] LLM_PROVIDER=bedrock but AWS_REGION is unset; using mock provider. " +
+          "Set AWS_REGION and BEDROCK_MODEL_ID for real Bedrock inference.",
+      );
+      return new MockProvider();
+    }
+    return new BedrockProvider();
+  }
   return hasRealKey() ? new AnthropicProvider() : new MockProvider();
 }
 

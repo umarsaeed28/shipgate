@@ -11,7 +11,7 @@ export function Sidebar({ items }: { items: NavItem[] }) {
     <aside className="sidebar">
       <div className="brand">
         <span className="dot" />
-        ShipGate QA
+        Shipgate QA
       </div>
 
       {items.map((item) => {

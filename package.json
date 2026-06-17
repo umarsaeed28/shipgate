@@ -16,14 +16,18 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "new-client": "tsx scripts/new-client.ts"
+    "new-client": "tsx scripts/new-client.ts",
+    "bedrock:smoke": "tsx scripts/bedrock-smoke.ts"
   },
   "dependencies": {
+    "@qa/config": "workspace:*",
+    "@qa/llm": "workspace:*",
     "@qa/store": "workspace:*"
   },
   "devDependencies": {
     "@prisma/client": "^6.2.1",
     "@types/node": "^22.10.5",
+    "dotenv": "^16.4.7",
     "codeceptjs": "^3.6.10",
     "playwright": "^1.49.1",
     "prisma": "^6.2.1",

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { prisma, recordEvent } from "@qa/store";
 import { llm, classificationPromptV1 } from "@qa/llm";
 import { Classification as ClassificationSchema } from "@qa/schemas";
@@ -12,6 +13,7 @@ import { Classification as ClassificationSchema } from "@qa/schemas";
  * source as evidence before asking Claude.
  */
 export async function classifyFailure(failureId: string) {
+  const correlationId = randomUUID();
   const failure = await prisma.failure.findUnique({
     where: { id: failureId },
     include: { test: true },
@@ -26,11 +28,16 @@ export async function classifyFailure(failureId: string) {
     },
   });
 
+  let modelRequestId: string | undefined;
   const result = await llm.completeStructured(ClassificationSchema, {
     promptId: prompt.promptId,
     input: { failure: { errorType: failure.errorType, message: failure.message } },
     system: prompt.system,
     user: prompt.user,
+    correlationId,
+    onMeta: (m) => {
+      modelRequestId = m.requestId;
+    },
   });
 
   const classification = await prisma.classification.upsert({
@@ -57,6 +64,8 @@ export async function classifyFailure(failureId: string) {
       class: result.class,
       confidence: result.confidence,
       provider: llm.providerName,
+      correlationId,
+      modelRequestId,
     },
   });
 

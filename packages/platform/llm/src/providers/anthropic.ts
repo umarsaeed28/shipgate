@@ -2,7 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { CompleteRequest, LlmProvider } from "../types";
 import { resolveModel } from "../model";
 
-/** Real Claude provider. ALL production Claude calls flow through here. */
+/**
+ * Direct Anthropic API provider. Intended for local development only; the
+ * deployed path runs through Bedrock (no model provider API key in deployment).
+ */
 export class AnthropicProvider implements LlmProvider {
   readonly name = "anthropic";
   private client: Anthropic;
@@ -17,6 +20,12 @@ export class AnthropicProvider implements LlmProvider {
       max_tokens: req.maxTokens ?? 2048,
       system: req.system,
       messages: [{ role: "user", content: req.user }],
+    });
+
+    req.onMeta?.({
+      provider: this.name,
+      correlationId: req.correlationId,
+      requestId: msg._request_id ?? undefined,
     });
 
     return msg.content

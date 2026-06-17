@@ -14,8 +14,14 @@ alwaysApply: true
 - Per-client secrets (Jira/Bitbucket/Confluence tokens) live in that instance's secret store / DB, encrypted at rest. Never commit secrets.
 
 # Agents & LLM
-- All Claude calls go through packages/platform/llm only. Model is configurable via env (ANTHROPIC_MODEL); never hardcode a model string in agent logic.
+- All Claude calls go through packages/platform/llm only. Model is configurable via env (BEDROCK_MODEL_ID for Bedrock, ANTHROPIC_MODEL for the direct API); never hardcode a model string in agent logic.
 - Agents emit structured output validated against the Zod schemas in packages/platform/schemas. Reject and retry on invalid output.
+
+# Model provider (Bedrock)
+- Bedrock secures inference only. Per client tokens, pulled diffs and logs, screenshots, and the history store remain our responsibility and must stay protected regardless of the model provider.
+- Do not claim certifications we do not hold. We may state that ShipGate runs on Amazon Bedrock and inside AWS. We may NOT state that ShipGate is SOC 2, ISO, or HIPAA certified until independently audited. AWS certifications cover infrastructure, not our application.
+- Authenticate to Bedrock with IAM roles. Never place a model provider API key in code or env for the deployed path. The deployed app uses the AWS credential chain.
+- Claude model identifiers and region availability on Bedrock change over time. Read them from config and env, never hardcode them in agent logic, and verify the current values against the live AWS Bedrock and Anthropic documentation before pinning a region or a model id.
 - Agent 3 (trend) answers ONLY from rows it queried out of the history store. It must never state a number it did not retrieve.
 - Agent 2 (regression) classifies and explains; it does NOT edit tests or mask failures in the MVP.
 
