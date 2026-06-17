@@ -249,6 +249,20 @@ model Event {
 }
 
 // ----------------------------------------------------------------------------
+// Landing-page lead capture
+// ----------------------------------------------------------------------------
+
+model Lead {
+  id        String   @id @default(cuid())
+  email     String
+  company   String?
+  message   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ----------------------------------------------------------------------------
 // Postgres-backed job queue (agent tasks run by the worker)
 // ----------------------------------------------------------------------------
 

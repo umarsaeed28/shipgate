@@ -1,3 +1,5 @@
+import { LeadForm } from "./LeadForm";
+
 const APP_DEMO_URL =
   process.env.NEXT_PUBLIC_APP_DEMO_URL ?? "http://localhost:3100/app-acme";
 
@@ -12,7 +14,7 @@ export default function LandingPage() {
         <div className="nav-links">
           <a href="#agents">Agents</a>
           <a href="#how">How it works</a>
-          <a href="#access">Access</a>
+          <a href="#contact">Contact</a>
         </div>
       </nav>
 
@@ -28,11 +30,11 @@ export default function LandingPage() {
           all backed by a complete history of every run and decision.
         </p>
         <div className="cta" id="access">
-          <a className="btn btn-primary" href={APP_DEMO_URL}>
-            Open a client workspace →
+          <a className="btn btn-primary" href="#contact">
+            Request access →
           </a>
-          <a className="btn btn-ghost" href="#agents">
-            See the agents
+          <a className="btn btn-ghost" href={APP_DEMO_URL}>
+            Open a demo workspace
           </a>
         </div>
       </header>
@@ -92,6 +94,18 @@ export default function LandingPage() {
           </span>
           <span className="pill">Scaffold</span>
         </div>
+      </section>
+
+      <section className="lead" id="contact">
+        <div className="lead-copy">
+          <span className="eyebrow">Get started</span>
+          <h2>Bring managed QA to your product</h2>
+          <p>
+            Tell us where to point the agents. We&apos;ll set up a dedicated
+            instance with its own database and your QA lead in the loop.
+          </p>
+        </div>
+        <LeadForm />
       </section>
 
       <footer className="footer">
