@@ -25,17 +25,6 @@ services:
       timeout: 3s
       retries: 5
 
-  mortgage-app:
-    build:
-      context: ../../
-      dockerfile: infra/docker/Dockerfile.mortgage-app
-    ports:
-      - "3099:3099"
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - postgres
-
   # Same Jenkins as repo-root docker-compose.yml - API must use service hostname, not localhost.
   jenkins:
     image: jenkins/jenkins:lts-jdk17
@@ -109,7 +98,6 @@ services:
     shm_size: "1gb"
     depends_on:
       - analysis-api
-      - mortgage-app
 
 volumes:
   pgdata:

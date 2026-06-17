@@ -25,15 +25,6 @@ services:
       timeout: 3s
       retries: 5
 
-  mortgage-app:
-    build:
-      context: .
-      dockerfile: infra/docker/Dockerfile.mortgage-app
-    ports:
-      - "3099:3099"
-    environment:
-      - NODE_ENV=production
-
   # Playwright + OpenAI agent: polls Analysis API for jobs, drives browser via MCP-shaped tools, posts findings.
   # Requires OPENAI_API_KEY. Point SHIPGATE_API_URL at the host API (or add api service to this compose).
   playwright-agent:
@@ -47,8 +38,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     shm_size: "1gb"
-    depends_on:
-      - mortgage-app
 
   # Jenkins LTS - create a Pipeline job named "shipgate-regression" (see Jenkinsfile).
   # UI: http://localhost:8080 - first run: docker compose logs jenkins (initial admin password).
@@ -61,7 +50,7 @@ services:
       - jenkins_home:/var/jenkins_home
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
-    # Lets Jenkins reach services on your machine (API :4000, mortgage :3099)
+    # Lets Jenkins reach services on your machine (API :4000)
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
