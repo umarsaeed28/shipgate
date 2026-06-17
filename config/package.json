@@ -1,0 +1,17 @@
+{
+  "name": "@qa/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "client.ts",
+  "types": "client.ts",
+  "exports": {
+    "./client": "./client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

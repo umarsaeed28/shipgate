@@ -1,199 +1,71 @@
-# Shipgate Regression Analyzer
+# AI QA Platform (MVP)
 
-An end-to-end QA automation and run analysis demo platform. Includes a mortgage calculator app, CodeceptJS+Playwright test framework, Jenkins pipeline, Allure reporting, analysis agents, and an operations dashboard.
+An AI-powered managed-QA platform. The agency runs it for clients; a human QA
+lead supervises Claude-driven agents per client.
 
-## Architecture
+- **Backbone:** Claude (agent reasoning) + CodeceptJS-on-Playwright (web test
+  execution) + a Postgres history store (every run, failure, classification, and
+  human decision).
+- **Deployment:** one shared landing site at `/`; the app deploys **once per
+  client** — same code, parameterized by `CLIENT_SLUG` + that client's own
+  database, reached at `/app-<slug>`. One instance = one client, so tenant
+  isolation is by construction.
+- **Roles:** `client`, `qa_lead`, `admin`. Enforced server-side via
+  `requireRole()` in `@qa/auth`.
+
+See `.cursor/rules/qa-platform.mdc` for the guardrails every change must obey.
+
+## Layout
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Shipgate Regression Analyzer                  │
-├──────────┬──────────┬───────────┬───────────┬──────────────────┤
-│ Mortgage │ Analysis │ Analysis  │ Scheduler │    Jenkins       │
-│   App    │   API    │    UI     │  Worker   │   Pipeline       │
-│ :3099    │ :4000    │ :5173     │ (cron)    │   (nightly)      │
-├──────────┴──────────┴───────────┴───────────┴──────────────────┤
-│                        Agent Layer                              │
-│  TestConductor · RunIngestion · RegressionAnalyzer · Summary   │
-├─────────────────────────────────────────────────────────────────┤
-│                     Integration Layer                           │
-│            Jenkins Adapter · Allure Reader                      │
-├─────────────────────────────────────────────────────────────────┤
-│                      Data / Storage                             │
-│           File-based JSON store · PostgreSQL (optional)         │
-└─────────────────────────────────────────────────────────────────┘
+apps/landing                 Shared marketing site (/)
+apps/app                     Per-client workspace (/app-<slug>)
+packages/platform/auth       Roles + server-side requireRole()
+packages/platform/store      Prisma client + history-store helpers (@qa/store)
+packages/platform/llm        Claude client                (Step 3)
+packages/platform/schemas    Zod schemas for agent output (Step 3)
+packages/platform/mcp        Atlassian MCP client         (Step 3)
+packages/platform/connectors Bitbucket read-only connector(Step 3)
+packages/agents/*            Scenario writer / regression / trend agents
+packages/test-runner         CodeceptJS runner            (Step 4)
+config/client.ts             Per-instance config (reads CLIENT_SLUG)
+prisma/                      Schema + migrations (the history store)
+scripts/new-client.ts        Provision a new client (db + migrate + seed)
 ```
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
-- Node.js >= 20
-- pnpm >= 9
+- Node 20+
+- pnpm 10+
+- A running PostgreSQL 14+
 
-### 1. Install dependencies
+## Setup
 
 ```bash
 pnpm install
+cp .env.example .env        # fill in real values; .env is gitignored
+pnpm db:migrate             # create/sync the dev database
+pnpm db:generate            # generate the Prisma client
+pnpm dev                    # landing on :3000, app on :3100/app-<slug>
 ```
 
-### 2. Install app-specific dependencies
+- Landing: <http://localhost:3000>
+- App: <http://localhost:3100/app-acme>
+
+## Provision another client
 
 ```bash
-cd apps/mortgage-app && pnpm install && cd ../..
-cd apps/analysis-ui && pnpm install && cd ../..
-cd apps/scheduler-worker && pnpm install && cd ../..
+pnpm new-client <slug> "Display Name"
 ```
 
-### 3. Start the demo (3 terminals or use the combined command)
+Creates `qa_<slug>`, migrates it, seeds the client + an admin user, and prints
+the env block to deploy that instance with.
 
-```bash
-# Terminal 1: Mortgage Calculator App
-pnpm dev:mortgage
+## Build steps
 
-# Terminal 2: Analysis API (auto-seeds demo data on first run)
-pnpm dev:api
-
-# Terminal 3: Analysis Dashboard UI
-pnpm dev:analysis-ui
-```
-
-Or run all together:
-```bash
-pnpm dev
-```
-
-### 4. Open in browser
-
-| Service | URL |
-|---------|-----|
-| Mortgage Calculator | http://localhost:3099 |
-| Analysis Dashboard | http://localhost:5173 |
-| Analysis API | http://localhost:4000 |
-
-## Demo Walkthrough
-
-### Step 1: View the Mortgage Calculator
-Open http://localhost:3099. Fill in mortgage details and calculate. Toggle Demo Mode to simulate bugs and delays.
-
-### Step 2: View the Analysis Dashboard
-Open http://localhost:5173. The dashboard auto-seeds with demo data showing:
-- 5 Jenkins builds (builds #45-49)
-- 8 classified failures across builds
-- 3 analysis summaries with root cause analysis
-- Agent status and scheduler config
-
-### Step 3: Simulate a Jenkins Webhook
-
-```bash
-curl -X POST http://localhost:4000/api/regression/webhooks/jenkins \
-  -H "Content-Type: application/json" \
-  -d '{"buildNumber": 50, "jobName": "shipgate-e2e", "status": "FAILURE"}'
-```
-
-### Step 4: Trigger Manual Analysis
-
-```bash
-curl -X POST http://localhost:4000/api/regression/analyze-latest
-```
-
-Or click "Run Analysis Now" on the Overview page.
-
-### Step 5: Run Tests (optional, requires mortgage app running)
-
-```bash
-cd tests/e2e
-npm install
-npm run test:smoke
-```
-
-### Step 6: Start the Scheduler Worker
-
-```bash
-pnpm dev:scheduler
-```
-
-The scheduler polls every 5 minutes for unprocessed builds.
-
-## Project Structure
-
-```
-shipgate/
-├── apps/
-│   ├── mortgage-app/        # React+Vite mortgage calculator (SUT)
-│   ├── api/                 # Fastify analysis API backend
-│   ├── analysis-ui/         # React+Vite analysis dashboard
-│   ├── scheduler-worker/    # Cron-based dormancy controller
-│   ├── web/                 # Next.js control center (legacy)
-│   └── worker/              # BullMQ worker (legacy)
-├── packages/
-│   ├── agents/              # Agent implementations
-│   │   ├── regression-analyzer.ts    # Failure classification
-│   │   ├── run-ingestion.ts          # Data normalization
-│   │   ├── summary-generator.ts      # Report generation
-│   │   ├── test-conductor-orchestrator.ts  # Workflow orchestration
-│   │   └── dormancy-controller.ts    # Sleep/wake control
-│   ├── integrations/        # External service adapters
-│   │   ├── jenkins-adapter.ts        # Jenkins build reader
-│   │   └── allure-reader.ts          # Allure results parser
-│   ├── shared/              # Shared types and DTOs
-│   └── database/            # Prisma schema + seed
-├── tests/
-│   └── e2e/                 # CodeceptJS + Playwright tests
-│       ├── smoke/           # Smoke test suite
-│       ├── regression/      # Full regression suite
-│       ├── pages/           # Page objects
-│       └── data/            # Test fixtures
-├── infra/
-│   ├── scripts/             # Setup and simulation scripts
-│   └── docker/              # Docker compose configs
-├── Jenkinsfile              # CI/CD pipeline definition
-└── .jenkins/                # Jenkins config templates
-```
-
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | /api/regression/overview | Dashboard metrics |
-| GET | /api/regression/runs | List test runs |
-| GET | /api/regression/runs/:id | Run details with failures |
-| GET | /api/regression/failures | Failures with filters |
-| GET | /api/regression/summaries | Analysis reports |
-| GET | /api/regression/agent-status | Agent state |
-| GET | /api/regression/settings | Configuration |
-| POST | /api/regression/settings | Update config |
-| POST | /api/regression/webhooks/jenkins | Ingest build |
-| POST | /api/regression/analyze-latest | Trigger analysis |
-| GET | /api/regression/builds | List Jenkins builds |
-
-## Failure Classification
-
-The Shipgate Regression Analyzer classifies failures into:
-
-| Classification | Description |
-|---------------|-------------|
-| **BUG / product_bug** | Business logic regression, wrong calculation, assertion mismatch |
-| **TEST_SCRIPT_ISSUE / test_bug** | Outdated selector, wrong test assumption, stale element |
-| **TIMEOUT** | Element wait timeout, navigation timeout, slow response |
-| **INFRASTRUCTURE / environment** | Connection refused, browser crash, port conflict |
-| **UNKNOWN / flaky** | Low confidence, conflicting signals, needs review |
-
-## MCP Readiness
-
-The architecture supports future Playwright MCP and Cursor MCP integration:
-- Structured automation artifacts
-- Normalized run ingestion
-- Abstracted integration contracts
-- Independent analysis logic
-- Agent interfaces ready for MCP tool injection
-
-## Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Mortgage App | React 18, Vite, TypeScript, Tailwind CSS |
-| Analysis UI | React 18, Vite, TypeScript, Tailwind CSS, TanStack Query, Recharts |
-| Analysis API | Fastify 5, TypeScript, file-based JSON store |
-| Test Framework | CodeceptJS, Playwright, Allure |
-| Scheduler | node-cron, TypeScript |
-| CI/CD | Jenkins, Docker |
-| Monorepo | pnpm workspaces |
+1. **Step 1 (this scaffold):** monorepo, both Next apps, Prisma schema +
+   migration, auth + roles, role-gated screen stubs, `new-client`.
+2. Settings & connections
+3. Claude + Jira MCP + Agent 1 (the core)
+4. Results surfaces + CI/run plumbing
+5. Scaffold Agents 2 & 3

@@ -1,32 +1,41 @@
 {
-  "name": "shipgate",
+  "name": "ai-qa-platform",
+  "version": "0.1.0",
   "private": true,
+  "description": "AI-powered managed-QA platform (MVP). One instance per client.",
   "scripts": {
-    "dev": "pnpm --parallel -r --filter \"@shipgate/mortgage-app\" --filter \"@shipgate/api\" --filter \"@shipgate/analysis-ui\" dev",
-    "dev:mortgage": "pnpm --filter @shipgate/mortgage-app dev",
-    "dev:api": "pnpm --filter @shipgate/api dev",
-    "dev:analysis-ui": "pnpm --filter @shipgate/analysis-ui dev",
-    "dev:scheduler": "pnpm --filter @shipgate/scheduler-worker dev",
-    "dev:playwright-agent": "pnpm --filter @shipgate/playwright-agent dev",
-    "dev:web": "pnpm --filter @shipgate/web dev",
-    "dev:worker": "pnpm --filter @shipgate/worker dev",
-    "dev:all": "pnpm --parallel -r --filter \"@shipgate/mortgage-app\" --filter \"@shipgate/api\" --filter \"@shipgate/analysis-ui\" --filter \"@shipgate/scheduler-worker\" dev",
-    "build": "pnpm -r build",
-    "db:generate": "pnpm --filter @shipgate/database generate",
-    "db:migrate": "pnpm --filter @shipgate/database migrate",
-    "db:push": "pnpm --filter @shipgate/database push",
-    "db:seed": "pnpm db:generate && pnpm --filter @shipgate/database seed",
-    "test:smoke": "cd tests/e2e && npx codeceptjs run --steps --grep @smoke",
-    "test:regression": "cd tests/e2e && TEST_SUITE=regression npx codeceptjs run --steps",
-    "jenkins:up": "bash infra/scripts/jenkins-up.sh",
-    "lint": "pnpm -r lint"
+    "dev": "pnpm -r --parallel run dev",
+    "dev:landing": "pnpm --filter @qa/landing run dev",
+    "dev:app": "pnpm --filter @qa/app run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "new-client": "tsx scripts/new-client.ts"
+  },
+  "dependencies": {
+    "@qa/store": "workspace:*"
   },
   "devDependencies": {
+    "@prisma/client": "^6.2.1",
+    "@types/node": "^22.10.5",
+    "prisma": "^6.2.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.3"
   },
-  "packageManager": "pnpm@9.14.2",
   "engines": {
     "node": ">=20"
-  }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "packageManager": "pnpm@10.14.0"
 }

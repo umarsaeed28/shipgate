@@ -1,0 +1,24 @@
+---
+description: Guardrails for the AI QA platform. Always apply.
+alwaysApply: true
+---
+
+# Boundaries
+- The client's product code (their Bitbucket repo) is READ-ONLY. Never modify it.
+- Generated tests live ONLY in the client's test directory/repo (tests/**), never mixed into product code.
+- Clients can VIEW everything and EDIT connections; clients can NEVER write agent configuration. Enforce on the server for every mutation, not only by hiding UI.
+- Every data-changing request checks the caller's role server-side. A hidden button is not a permission.
+
+# Tenancy
+- Each deployed instance serves exactly one client (CLIENT_SLUG). Never write a query that spans clients.
+- Per-client secrets (Jira/Bitbucket/Confluence tokens) live in that instance's secret store / DB, encrypted at rest. Never commit secrets.
+
+# Agents & LLM
+- All Claude calls go through packages/platform/llm only. Model is configurable via env (ANTHROPIC_MODEL); never hardcode a model string in agent logic.
+- Agents emit structured output validated against the Zod schemas in packages/platform/schemas. Reject and retry on invalid output.
+- Agent 3 (trend) answers ONLY from rows it queried out of the history store. It must never state a number it did not retrieve.
+- Agent 2 (regression) classifies and explains; it does NOT edit tests or mask failures in the MVP.
+
+# Data
+- Every run, failure, classification, and human decision is written to the history store with timestamps. This is the backbone for Agent 3 — required, not optional.
+- References cross boundaries, not payloads: store SHAs, IDs, and artifact URLs; pull diffs/logs/screenshots on demand; don't copy whole repos or videos into the DB.

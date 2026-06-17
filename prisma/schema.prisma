@@ -1,0 +1,222 @@
+// AI QA platform — history store.
+// One database per client (tenant isolation by construction). See .cursor/rules/qa-platform.mdc.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../packages/platform/store/src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
+
+enum Role {
+  client
+  qa_lead
+  admin
+}
+
+enum ConnectionType {
+  jira
+  bitbucket
+  confluence
+}
+
+enum ConnectionStatus {
+  connected
+  disconnected
+  error
+}
+
+enum ScenarioStatus {
+  pending_review
+  kept
+  discarded
+  automated
+}
+
+enum TestLayer {
+  web
+}
+
+enum TestFramework {
+  codeceptjs
+}
+
+enum TestStatus {
+  draft
+  active
+  passing
+  failing
+  broken
+}
+
+enum RunSource {
+  schedule
+  pr
+  jenkins
+}
+
+enum FailureClass {
+  real_bug
+  test_issue
+  flaky
+}
+
+// ----------------------------------------------------------------------------
+// Tenant + identity
+// ----------------------------------------------------------------------------
+
+model Client {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  name       String
+  stagingUrl String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users       User[]
+  connections Connection[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  role      Role     @default(client)
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+// ----------------------------------------------------------------------------
+// Connections (client-managed secrets, encrypted at rest)
+// ----------------------------------------------------------------------------
+
+model Connection {
+  id             String           @id @default(cuid())
+  clientId       String
+  client         Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type           ConnectionType
+  status         ConnectionStatus @default(disconnected)
+  encryptedToken String?
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([clientId, type])
+  @@index([clientId])
+}
+
+// ----------------------------------------------------------------------------
+// Agent 1 — scenarios & tests
+// ----------------------------------------------------------------------------
+
+model Scenario {
+  id              String         @id @default(cuid())
+  title           String
+  steps           String[]
+  rationale       String?
+  sourceStoryKey  String?
+  sourceCommitSha String?
+  status          ScenarioStatus @default(pending_review)
+  decisionBy      String?
+  decisionReason  String?
+  decidedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  test Test?
+
+  @@index([status])
+  @@index([sourceStoryKey])
+}
+
+model Test {
+  id         String        @id @default(cuid())
+  scenarioId String?       @unique
+  scenario   Scenario?     @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+  layer      TestLayer     @default(web)
+  framework  TestFramework @default(codeceptjs)
+  filePath   String
+  status     TestStatus    @default(draft)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  failures Failure[]
+
+  @@index([status])
+}
+
+// ----------------------------------------------------------------------------
+// Runs, failures, classifications
+// ----------------------------------------------------------------------------
+
+model Run {
+  id         String    @id @default(cuid())
+  trigger    String
+  commitSha  String?
+  source     RunSource
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  summary    Json?
+
+  failures Failure[]
+
+  @@index([startedAt])
+  @@index([source])
+}
+
+model Failure {
+  id          String   @id @default(cuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testId      String?
+  test        Test?    @relation(fields: [testId], references: [id], onDelete: SetNull)
+  errorType   String?
+  message     String?
+  artifactUrls String[]
+  createdAt   DateTime @default(now())
+
+  classification Classification?
+
+  @@index([runId])
+  @@index([testId])
+}
+
+model Classification {
+  id             String        @id @default(cuid())
+  failureId      String        @unique
+  failure        Failure       @relation(fields: [failureId], references: [id], onDelete: Cascade)
+  class          FailureClass
+  confidence     Float
+  rationale      String?
+  evidenceUrls   String[]
+  confirmedBy    String?
+  confirmedClass FailureClass?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// ----------------------------------------------------------------------------
+// Append-only history feed (backbone for Agent 3)
+// ----------------------------------------------------------------------------
+
+model Event {
+  id        String   @id @default(cuid())
+  type      String
+  entityRef String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityRef])
+  @@index([type, createdAt])
+}
