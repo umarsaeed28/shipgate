@@ -7,11 +7,13 @@ process.chdir(fileURLToPath(new URL("../../../", import.meta.url)));
 
 import { claimNext, completeJob, failJob } from "@qa/queue";
 import { handleJob } from "./handlers";
+import { startScheduler } from "./scheduler";
 
 const POLL_MS = Number(process.env.WORKER_POLL_MS ?? 1000);
 
 async function loop() {
   console.log("[worker] started; polling for jobs…");
+  startScheduler();
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const job = await claimNext();
