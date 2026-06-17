@@ -7,5 +7,15 @@
   "types": "src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@qa/config": "workspace:*",
+    "@qa/connectors": "workspace:*",
+    "@qa/crypto": "workspace:*",
+    "@qa/llm": "workspace:*",
+    "@qa/mcp": "workspace:*",
+    "@qa/schemas": "workspace:*",
+    "@qa/store": "workspace:*",
+    "@qa/test-runner": "workspace:*"
+  },
   "devDependencies": { "typescript": "^5.7.3" }
 }

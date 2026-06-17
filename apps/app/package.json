@@ -12,6 +12,7 @@
     "@qa/auth": "workspace:*",
     "@qa/config": "workspace:*",
     "@qa/crypto": "workspace:*",
+    "@qa/queue": "workspace:*",
     "@qa/store": "workspace:*",
     "dotenv": "^16.4.7",
     "next": "^15.1.4",

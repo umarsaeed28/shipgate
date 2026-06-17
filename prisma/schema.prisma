@@ -68,6 +68,13 @@ enum FailureClass {
   flaky
 }
 
+enum JobStatus {
+  queued
+  running
+  done
+  error
+}
+
 // ----------------------------------------------------------------------------
 // Tenant + identity
 // ----------------------------------------------------------------------------
@@ -132,9 +139,16 @@ model AgentConfig {
 // Agent 1 — scenarios & tests
 // ----------------------------------------------------------------------------
 
+enum ScenarioKind {
+  story_driven
+  code_deviation
+}
+
 model Scenario {
   id              String         @id @default(cuid())
   title           String
+  kind            ScenarioKind   @default(story_driven)
+  priority        String         @default("medium")
   steps           String[]
   rationale       String?
   sourceStoryKey  String?
@@ -232,4 +246,25 @@ model Event {
   @@index([createdAt])
   @@index([entityRef])
   @@index([type, createdAt])
+}
+
+// ----------------------------------------------------------------------------
+// Postgres-backed job queue (agent tasks run by the worker)
+// ----------------------------------------------------------------------------
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json
+  status      JobStatus @default(queued)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  result      Json?
+  error       String?
+  runAt       DateTime  @default(now())
+  lockedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, runAt])
 }

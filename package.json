@@ -4,9 +4,12 @@
   "private": true,
   "description": "AI-powered managed-QA platform (MVP). One instance per client.",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
+    "dev": "pnpm --filter @qa/landing --filter @qa/app --parallel run dev",
     "dev:landing": "pnpm --filter @qa/landing run dev",
     "dev:app": "pnpm --filter @qa/app run dev",
+    "worker": "pnpm --filter @qa/worker run start",
+    "worker:dev": "pnpm --filter @qa/worker run dev",
+    "worker:once": "pnpm --filter @qa/worker run once",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "db:generate": "prisma generate",
@@ -21,6 +24,8 @@
   "devDependencies": {
     "@prisma/client": "^6.2.1",
     "@types/node": "^22.10.5",
+    "codeceptjs": "^3.6.10",
+    "playwright": "^1.49.1",
     "prisma": "^6.2.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"

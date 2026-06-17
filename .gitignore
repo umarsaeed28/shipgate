@@ -19,6 +19,9 @@ build/
 # prisma generated client
 packages/platform/store/src/generated/
 
+# codeceptjs run artifacts (screenshots, etc.) — store references, not payloads
+**/output/
+
 # logs
 *.log
 npm-debug.log*

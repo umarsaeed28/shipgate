@@ -1,0 +1,25 @@
+{
+  "name": "@qa/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "once": "tsx src/drain-once.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@qa/config": "workspace:*",
+    "@qa/queue": "workspace:*",
+    "@qa/scenario-writer": "workspace:*",
+    "@qa/store": "workspace:*",
+    "@qa/test-runner": "workspace:*",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
