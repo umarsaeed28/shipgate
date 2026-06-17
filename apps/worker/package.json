@@ -12,6 +12,7 @@
   "dependencies": {
     "@qa/config": "workspace:*",
     "@qa/queue": "workspace:*",
+    "@qa/regression-analyzer": "workspace:*",
     "@qa/scenario-writer": "workspace:*",
     "@qa/store": "workspace:*",
     "@qa/test-runner": "workspace:*",

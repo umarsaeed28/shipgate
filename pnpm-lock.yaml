@@ -51,6 +51,9 @@ importers:
       '@qa/store':
         specifier: workspace:*
         version: link:../../packages/platform/store
+      '@qa/trend-analyzer':
+        specifier: workspace:*
+        version: link:../../packages/agents/trend-analyzer
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
@@ -110,6 +113,9 @@ importers:
       '@qa/queue':
         specifier: workspace:*
         version: link:../../packages/platform/queue
+      '@qa/regression-analyzer':
+        specifier: workspace:*
+        version: link:../../packages/agents/regression-analyzer
       '@qa/scenario-writer':
         specifier: workspace:*
         version: link:../../packages/agents/scenario-writer
@@ -140,6 +146,16 @@ importers:
         version: 5.9.3
 
   packages/agents/regression-analyzer:
+    dependencies:
+      '@qa/llm':
+        specifier: workspace:*
+        version: link:../../platform/llm
+      '@qa/schemas':
+        specifier: workspace:*
+        version: link:../../platform/schemas
+      '@qa/store':
+        specifier: workspace:*
+        version: link:../../platform/store
     devDependencies:
       typescript:
         specifier: ^5.7.3
@@ -177,6 +193,10 @@ importers:
         version: 5.9.3
 
   packages/agents/trend-analyzer:
+    dependencies:
+      '@qa/store':
+        specifier: workspace:*
+        version: link:../../platform/store
     devDependencies:
       typescript:
         specifier: ^5.7.3

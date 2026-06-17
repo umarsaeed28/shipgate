@@ -1,6 +1,11 @@
 import { prisma, type Job } from "@qa/store";
 
-export type JobType = "draft_scenarios" | "generate_test" | "run_suite";
+export type JobType =
+  | "draft_scenarios"
+  | "generate_test"
+  | "run_suite"
+  | "ingest_jenkins"
+  | "classify_failure";
 
 export async function enqueue(
   type: JobType,

@@ -7,5 +7,10 @@
   "types": "src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@qa/llm": "workspace:*",
+    "@qa/schemas": "workspace:*",
+    "@qa/store": "workspace:*"
+  },
   "devDependencies": { "typescript": "^5.7.3" }
 }

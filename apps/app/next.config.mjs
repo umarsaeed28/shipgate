@@ -17,6 +17,7 @@ const nextConfig = {
     "@qa/store",
     "@qa/crypto",
     "@qa/queue",
+    "@qa/trend-analyzer",
   ],
   env: {
     APP_BASE_PATH: basePath,
