@@ -11,7 +11,7 @@ const nextConfig = {
   reactStrictMode: true,
   basePath,
   // Workspace packages are shipped as TypeScript source.
-  transpilePackages: ["@qa/auth", "@qa/config", "@qa/store"],
+  transpilePackages: ["@qa/auth", "@qa/config", "@qa/store", "@qa/crypto"],
   env: {
     APP_BASE_PATH: basePath,
   },

@@ -36,6 +36,9 @@ importers:
       '@qa/config':
         specifier: workspace:*
         version: link:../../config
+      '@qa/crypto':
+        specifier: workspace:*
+        version: link:../../packages/platform/crypto
       '@qa/store':
         specifier: workspace:*
         version: link:../../packages/platform/store
@@ -121,6 +124,12 @@ importers:
         version: 5.9.3
 
   packages/platform/connectors:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/platform/crypto:
     devDependencies:
       typescript:
         specifier: ^5.7.3
