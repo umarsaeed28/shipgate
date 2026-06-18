@@ -1,0 +1,41 @@
+# Demo image for the Shipgate monorepo.
+#
+# Builds the landing site and the app workspace from TypeScript source and runs
+# them with `next start`. The same image is reused for migrate/seed, the app,
+# and the landing services in docker-compose.demo.yml (different commands).
+FROM node:20-bookworm-slim
+
+ENV PNPM_HOME=/pnpm \
+    PATH=/pnpm:$PATH \
+    NEXT_TELEMETRY_DISABLED=1
+
+# openssl + ca-certificates are required by the Prisma engines.
+RUN corepack enable \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /repo
+
+# Install dependencies against the committed lockfile.
+COPY . .
+RUN pnpm install --frozen-lockfile
+
+# Generate the Prisma client.
+RUN pnpm db:generate
+
+# CLIENT_SLUG/APP_BASE_PATH are read at import time, so they must be present
+# during the Next build. The runtime overrides them via compose env.
+ENV CLIENT_SLUG=acme \
+    APP_BASE_PATH=/app-acme
+
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time, so the
+# demo link must be baked here. Override with --build-arg for a hosted demo.
+ARG NEXT_PUBLIC_APP_DEMO_URL=http://localhost:3100/app-acme
+ENV NEXT_PUBLIC_APP_DEMO_URL=${NEXT_PUBLIC_APP_DEMO_URL}
+
+RUN pnpm --filter @qa/app build \
+    && pnpm --filter @qa/landing build
+
+# landing :3000, app :3100
+EXPOSE 3000 3100

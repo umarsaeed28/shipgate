@@ -198,6 +198,15 @@ a {
 }
 
 /* Content */
+.demo-banner {
+  padding: 9px 36px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-ink);
+  background: rgba(6, 182, 212, 0.08);
+  border-bottom: 1px solid rgba(6, 182, 212, 0.25);
+}
+
 .content {
   padding: 44px 36px;
   max-width: 1080px;
@@ -634,6 +643,38 @@ a {
   border-radius: 12px;
   overflow: hidden;
   font-size: 14px;
+}
+
+.cov-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cov-bar {
+  position: relative;
+  display: block;
+  width: 140px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.cov-bar > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  height: 100%;
+  background: var(--brand, #06b6d4);
+  border-radius: 999px;
+}
+
+.cov-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 13px;
+  min-width: 38px;
 }
 
 .grid-table thead th {

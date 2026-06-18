@@ -9,6 +9,7 @@ import {
   upsertConnection,
 } from "../../lib/connections";
 import { setAgentConfig, type AgentConfigValue } from "../../lib/agent-config";
+import { DEMO_MODE, DEMO_MESSAGE } from "../../lib/demo";
 
 export interface ActionResult {
   ok: boolean;
@@ -33,6 +34,7 @@ export async function saveConnection(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (DEMO_MODE) return { ok: false, message: DEMO_MESSAGE };
   const session = await getSession();
   const denied = guard(() =>
     requireRole(session, { capability: "editConnections" }),
@@ -57,6 +59,7 @@ export async function saveStagingUrl(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (DEMO_MODE) return { ok: false, message: DEMO_MESSAGE };
   const session = await getSession();
   const denied = guard(() =>
     requireRole(session, { capability: "editConnections" }),
@@ -72,6 +75,7 @@ export async function saveAgentConfig(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (DEMO_MODE) return { ok: false, message: DEMO_MESSAGE };
   const session = await getSession();
   // Server-side enforcement: only admins may write agent config.
   const denied = guard(() =>

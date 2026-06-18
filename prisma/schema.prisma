@@ -257,6 +257,11 @@ model Lead {
   email     String
   company   String?
   message   String?
+  // Multiple choice onboarding answers keyed by stable question key, plus an
+  // optional "__other" map of notes. Captured by the landing page questionnaire.
+  answers   Json?
+  // Derived, scannable readiness highlights for the assigned QA lead.
+  readiness Json?
   createdAt DateTime @default(now())
 
   @@index([createdAt])

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole, ForbiddenError, UnauthorizedError } from "@qa/auth";
 import { getSession } from "../../../lib/session";
 import { getAgentConfig, setAgentConfig } from "../../../lib/agent-config";
+import { DEMO_MODE, DEMO_MESSAGE } from "../../../lib/demo";
 
 /**
  * Server-side enforcement: only admins may read-write agent config mutations.
@@ -9,6 +10,9 @@ import { getAgentConfig, setAgentConfig } from "../../../lib/agent-config";
  * depend on the UI hiding a button.
  */
 export async function POST(req: Request) {
+  if (DEMO_MODE) {
+    return NextResponse.json({ error: DEMO_MESSAGE }, { status: 403 });
+  }
   const session = await getSession();
   try {
     requireRole(session, { capability: "editAgentConfig" });

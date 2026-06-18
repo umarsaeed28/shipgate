@@ -4,6 +4,7 @@ import { roleCan } from "@qa/auth";
 import { clientConfig } from "@qa/config/client";
 import { NAV_ITEMS } from "../lib/nav";
 import { getSession } from "../lib/session";
+import { DEMO_MODE } from "../lib/demo";
 import { Sidebar } from "./components/Sidebar";
 import { RoleSwitch } from "./components/RoleSwitch";
 
@@ -35,6 +36,12 @@ export default async function AppLayout({
               </div>
               <RoleSwitch current={session.role} />
             </header>
+            {DEMO_MODE ? (
+              <div className="demo-banner">
+                Read only demo · sample data · switch roles to explore. Changes are
+                disabled.
+              </div>
+            ) : null}
             <main className="content">{children}</main>
           </div>
         </div>

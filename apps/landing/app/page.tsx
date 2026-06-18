@@ -1,5 +1,3 @@
-import { LeadForm } from "./LeadForm";
-
 const APP_DEMO_URL =
   process.env.NEXT_PUBLIC_APP_DEMO_URL ?? "http://localhost:3100/app-acme";
 
@@ -20,7 +18,7 @@ export default function LandingPage() {
 
       <header className="hero">
         <h1>
-          Managed QA, run by <span className="grad">intelligent agents</span>
+          Managed QA, powered by <span className="grad">intelligent agents</span>
         </h1>
         <p>
           Shipgate gives your product a full QA team. Agents powered by Claude
@@ -29,7 +27,7 @@ export default function LandingPage() {
           suite without sign off.
         </p>
         <div className="cta" id="access">
-          <a className="btn btn-primary" href="#contact">
+          <a className="btn btn-primary" href="/onboarding">
             Request access →
           </a>
           <a className="btn btn-ghost" href={APP_DEMO_URL}>
@@ -269,13 +267,17 @@ export default function LandingPage() {
       <section className="lead" id="contact">
         <div className="lead-copy">
           <span className="eyebrow">Get started</span>
-          <h2>Bring managed QA to your product</h2>
+          <h2>Tell us about your team</h2>
           <p>
-            Tell us where to point the agents. We set up a dedicated instance with
-            its own database and a QA lead assigned to your account.
+            Answer a few quick multiple choice questions about your team, your
+            goals, and where you are with automation and AI. It takes a few
+            minutes, and your assigned QA lead walks into the first meeting
+            already informed.
           </p>
+          <a className="btn btn-primary lead-cta" href="/onboarding">
+            Start the questionnaire →
+          </a>
         </div>
-        <LeadForm />
       </section>
 
       <footer className="footer big">
@@ -284,7 +286,7 @@ export default function LandingPage() {
             <span className="dot" />
             Shipgate
           </div>
-          <p className="footer-tag">Managed QA, run by intelligent agents.</p>
+          <p className="footer-tag">Managed QA, powered by intelligent agents.</p>
         </div>
         <div className="footer-cols">
           <div>

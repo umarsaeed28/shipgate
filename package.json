@@ -17,7 +17,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "new-client": "tsx scripts/new-client.ts",
-    "bedrock:smoke": "tsx scripts/bedrock-smoke.ts"
+    "bedrock:smoke": "tsx scripts/bedrock-smoke.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@qa/config": "workspace:*",

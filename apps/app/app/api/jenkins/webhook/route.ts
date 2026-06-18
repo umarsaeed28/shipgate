@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { enqueue } from "@qa/queue";
 import { recordEvent } from "@qa/store";
+import { DEMO_MODE, DEMO_MESSAGE } from "../../../../lib/demo";
 
 /**
  * Agent 2 ingestion entry point (webhook). A Jenkins post-build step POSTs the
@@ -11,6 +12,9 @@ import { recordEvent } from "@qa/store";
  * secret header (left as a documented stub for the MVP).
  */
 export async function POST(req: Request) {
+  if (DEMO_MODE) {
+    return NextResponse.json({ error: DEMO_MESSAGE }, { status: 403 });
+  }
   const body = (await req.json().catch(() => ({}))) as {
     buildUrl?: string;
     junitXml?: string;

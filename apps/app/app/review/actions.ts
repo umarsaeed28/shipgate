@@ -5,6 +5,7 @@ import { requireRole, ForbiddenError, UnauthorizedError } from "@qa/auth";
 import { recordEvent, prisma } from "@qa/store";
 import { enqueue } from "@qa/queue";
 import { getSession } from "../../lib/session";
+import { DEMO_MODE, DEMO_MESSAGE } from "../../lib/demo";
 
 export interface ActionResult {
   ok: boolean;
@@ -28,6 +29,7 @@ export async function requestScenarios(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (DEMO_MODE) return { ok: false, message: DEMO_MESSAGE };
   const denied = await ensureReviewer();
   if (denied) return denied;
 
@@ -55,6 +57,7 @@ export async function requestScenarios(
 }
 
 export async function decideScenario(formData: FormData): Promise<void> {
+  if (DEMO_MODE) return;
   const session = await getSession();
   requireRole(session, { capability: "reviewScenarios" });
 

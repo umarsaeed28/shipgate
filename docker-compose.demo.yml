@@ -1,0 +1,74 @@
+# Read-only public demo for Shipgate.
+#
+#   docker compose -f docker-compose.demo.yml up --build
+#
+# Brings up Postgres, applies migrations, seeds synthetic demo data, then serves:
+#   landing  -> http://localhost:3000
+#   app      -> http://localhost:3100/app-acme   (read-only, role switching enabled)
+#
+# DEMO_MODE=1 blocks every mutation server-side, so it is safe to expose. The
+# app never calls Bedrock/Jira/Bitbucket in this mode.
+
+x-demo-image: &demo-image
+  build:
+    context: .
+    dockerfile: infra/docker/Dockerfile.demo
+  image: shipgate-demo:latest
+
+x-app-env: &app-env
+  CLIENT_SLUG: acme
+  APP_BASE_PATH: /app-acme
+  DATABASE_URL: postgresql://qa:qa@db:5432/qa_acme
+  AUTH_SECRET: demo-only-not-a-real-secret
+  DEMO_MODE: "1"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: qa
+      POSTGRES_PASSWORD: qa
+      POSTGRES_DB: qa_acme
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa -d qa_acme"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+
+  migrate-seed:
+    <<: *demo-image
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+    command: sh -lc "pnpm db:deploy && pnpm seed:demo"
+    restart: "no"
+
+  app:
+    <<: *demo-image
+    depends_on:
+      migrate-seed:
+        condition: service_completed_successfully
+    environment:
+      <<: *app-env
+    command: sh -lc "pnpm --filter @qa/app start"
+    ports:
+      - "3100:3100"
+
+  landing:
+    <<: *demo-image
+    depends_on:
+      migrate-seed:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://qa:qa@db:5432/qa_acme
+      NEXT_PUBLIC_APP_DEMO_URL: http://localhost:3100/app-acme
+    command: sh -lc "pnpm --filter @qa/landing start"
+    ports:
+      - "3000:3000"
+
+volumes:
+  dbdata:
