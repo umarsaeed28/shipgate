@@ -1,6 +1,7 @@
 {
+  "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && pnpm db:generate && pnpm --filter @qa/landing run build",
+  "buildCommand": "(cd ../.. && pnpm db:generate) && next build",
   "env": {
     "CLIENT_SLUG": "acme"
   }

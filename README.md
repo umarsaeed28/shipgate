@@ -61,6 +61,12 @@ pnpm worker                 # (separate shell) drains the job queue
 - Landing: <http://localhost:3000>
 - App: <http://localhost:3100/app-acme>
 
+## Vercel
+
+See [docs/vercel.md](docs/vercel.md). Set **Root Directory** to `apps/landing` for
+the marketing site or `apps/app` for a client workspace. A missing Root Directory
+is the usual cause of `404: NOT_FOUND` after a successful build.
+
 ## Agents & the queue
 
 Agent tasks run through a Postgres-backed queue drained by `apps/worker`:
