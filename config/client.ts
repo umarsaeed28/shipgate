@@ -6,12 +6,11 @@
  * deploy time. Never write a query that spans clients.
  */
 
-function required(name: string): string {
+function env(name: string, fallback?: string): string {
   const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
+  if (value) return value;
+  if (fallback !== undefined) return fallback;
+  throw new Error(`Missing required environment variable: ${name}`);
 }
 
 export interface ClientConfig {
@@ -26,8 +25,10 @@ export interface ClientConfig {
 }
 
 export const clientConfig: ClientConfig = {
-  slug: required("CLIENT_SLUG"),
-  basePath: process.env.APP_BASE_PATH ?? `/app-${process.env.CLIENT_SLUG ?? ""}`,
+  // Default "acme" matches next.config.mjs and seed scripts so builds (e.g. Vercel
+  // preview) succeed without env. Set CLIENT_SLUG explicitly per client instance.
+  slug: env("CLIENT_SLUG", "acme"),
+  basePath: process.env.APP_BASE_PATH ?? `/app-${process.env.CLIENT_SLUG ?? "acme"}`,
   anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6",
   atlassianMcpUrl:
     process.env.ATLASSIAN_MCP_URL ?? "https://mcp.atlassian.com/v1/mcp",
