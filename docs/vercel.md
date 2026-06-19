@@ -2,19 +2,38 @@
 
 This repo is a pnpm monorepo. Each Next.js app must be its own Vercel project with
 the correct **Root Directory**. If Root Directory is wrong, the build may succeed
-but the site returns `404: NOT_FOUND`.
+but the site returns `404: NOT_FOUND` or shows the default "Create Next App"
+page instead of Shipgate.
+
+## Verify you deployed the right project
+
+After deploy, the home page title must be:
+
+**Shipgate QA — AI-managed quality assurance**
+
+If you see **Create Next App** or a generic Next.js starter, the Vercel project is
+connected to the wrong repository, wrong branch, or the Root Directory is not set
+to `apps/landing`. Fix the project settings below and redeploy.
 
 ## Landing site (marketing + onboarding)
 
-Create a Vercel project from this repo with:
+Create a Vercel project from the `umarsaeed28/shipgate` repo with:
 
 | Setting | Value |
 |---------|-------|
 | **Root Directory** | `apps/landing` |
 | **Framework Preset** | Next.js |
+| **Build Command** | leave default (`pnpm run build` / `next build`) |
+| **Install Command** | leave default (Vercel runs `pnpm install` from the repo root) |
 
-`apps/landing/vercel.json` runs `prisma generate` and builds the landing app.
+Do **not** override Install Command with `cd ../..` — Vercel already installs from
+the monorepo root and that override breaks the install path.
+
 Routes:
+
+- `/` — home page
+- `/onboarding` — client questionnaire
+- `/api/lead` — lead capture (needs `DATABASE_URL`)
 
 - `/` — home page
 - `/onboarding` — client questionnaire
