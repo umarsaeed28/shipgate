@@ -63,9 +63,9 @@ pnpm worker                 # (separate shell) drains the job queue
 
 ## Vercel
 
-See [docs/vercel.md](docs/vercel.md). Set **Root Directory** to `apps/landing` for
-the marketing site or `apps/app` for a client workspace. A missing Root Directory
-is the usual cause of `404: NOT_FOUND` after a successful build.
+Import `umarsaeed28/shipgate` into Vercel with default settings and deploy — the
+root `vercel.json` builds and serves the landing site automatically (no Root
+Directory needed). Add `DATABASE_URL` for lead capture. See [docs/vercel.md](docs/vercel.md).
 
 ## Agents & the queue
 

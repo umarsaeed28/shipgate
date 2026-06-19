@@ -23,7 +23,10 @@
   "dependencies": {
     "@qa/config": "workspace:*",
     "@qa/llm": "workspace:*",
-    "@qa/store": "workspace:*"
+    "@qa/store": "workspace:*",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@prisma/client": "^6.2.1",

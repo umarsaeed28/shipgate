@@ -17,6 +17,15 @@ importers:
       '@qa/store':
         specifier: workspace:*
         version: link:packages/platform/store
+      next:
+        specifier: ^15.1.4
+        version: 15.5.19(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.7(react@19.2.7)
     devDependencies:
       '@prisma/client':
         specifier: ^6.2.1

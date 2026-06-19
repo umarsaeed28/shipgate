@@ -1,0 +1,9 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm db:generate && pnpm --filter @qa/landing exec next build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "outputDirectory": "apps/landing/.next",
+  "env": {
+    "CLIENT_SLUG": "acme"
+  }
+}
